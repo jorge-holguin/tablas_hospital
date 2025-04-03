@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { getCookie } from "cookies-next"
 import Navbar from "@/components/navbar"
 import UnifiedFooter from "@/components/unified-footer"
 
@@ -16,14 +17,12 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar si el usuario está autenticado
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("hospital-auth-token")
-      if (!token) {
-        router.push("/login")
-      } else {
-        setLoading(false)
-      }
+    // Verificar si el usuario está autenticado usando cookies
+    const token = getCookie('token')
+    if (!token) {
+      router.push("/login")
+    } else {
+      setLoading(false)
     }
   }, [router])
 
@@ -43,4 +42,3 @@ export default function DashboardLayout({
     </div>
   )
 }
-

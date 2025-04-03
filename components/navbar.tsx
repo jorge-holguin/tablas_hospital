@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { deleteCookie } from "cookies-next"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -33,6 +34,27 @@ import {
 } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 
+// Define types for navigation items
+interface SubItem {
+  name: string;
+  href: string;
+  icon?: React.ReactNode;
+  subItems?: SubItem[];
+}
+
+interface SubCategory {
+  name: string;
+  subItems: SubItem[];
+}
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ReactNode;
+  subItems?: SubItem[];
+  subCategories?: SubCategory[];
+}
+
 export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -44,22 +66,22 @@ export default function Navbar() {
       const userStr = localStorage.getItem("hospital-user")
       if (userStr) {
         const user = JSON.parse(userStr)
-        setUserName(user.name)
+        setUserName(user.NOMBRE || user.name || "Usuario")
       }
     }
   }, [])
 
   const handleLogout = () => {
     // Eliminar token y datos de usuario
+    deleteCookie('token')
     if (typeof window !== "undefined") {
-      localStorage.removeItem("hospital-auth-token")
       localStorage.removeItem("hospital-user")
     }
     router.push("/login")
   }
 
   // Estructura de navegación con categorías y subcategorías
-  const navItems = [
+  const navItems: NavItem[] = [
     {
       name: "Tablas",
       href: "/dashboard/tablas",
@@ -143,7 +165,7 @@ export default function Navbar() {
       subItems: [
         {
           name: "Reportes Generales",
-          href: "/dashboard/reportes",
+          href: "/dashboard/reportes/generales",
           subItems: [
             { name: "Parte Diario de Farmacia", href: "/dashboard/reportes/parte-diario" },
             { name: "Consumo Valorizado", href: "/dashboard/reportes/consumo-valorizado" },
@@ -155,7 +177,7 @@ export default function Navbar() {
         },
         {
           name: "Reportes de Análisis ABC",
-          href: "/dashboard/reportes",
+          href: "/dashboard/reportes/analisis-abc",
           subItems: [
             { name: "Curva ABC Consumo", href: "/dashboard/reportes/curva-abc-consumo" },
             { name: "Curva ABC Importe", href: "/dashboard/reportes/curva-abc-importe" },
@@ -164,7 +186,7 @@ export default function Navbar() {
         },
         {
           name: "Reportes de Kardex",
-          href: "/dashboard/reportes",
+          href: "/dashboard/reportes/kardex",
           subItems: [
             { name: "Por Cuenta", href: "/dashboard/reportes/kardex-cuenta" },
             { name: "Por Historia Clínica", href: "/dashboard/reportes/kardex-historia" },
@@ -173,7 +195,7 @@ export default function Navbar() {
         },
         {
           name: "Reportes Adicionales",
-          href: "/dashboard/reportes",
+          href: "/dashboard/reportes/adicionales",
           subItems: [
             { name: "Artículos por Consultorio", href: "/dashboard/reportes/articulos-consultorio" },
             { name: "Proformas y Ventas por Usuario", href: "/dashboard/reportes/ventas-usuario" },
@@ -186,7 +208,7 @@ export default function Navbar() {
   ]
 
   // Función para renderizar los submenús en la versión móvil
-  const renderMobileSubMenu = (items) => {
+  const renderMobileSubMenu = (items: SubItem[]) => {
     if (!items) return null
 
     return (
@@ -262,7 +284,7 @@ export default function Navbar() {
                                 >
                                   {subItem.name}
                                 </Link>
-                                {subItem.subItems && renderMobileSubMenu(subItem.subItems)}
+                                {'subItems' in subItem && subItem.subItems && renderMobileSubMenu(subItem.subItems)}
                               </>
                             )}
                           </div>
@@ -340,13 +362,13 @@ export default function Navbar() {
                               className={`text-sm px-3 py-2 rounded-sm flex justify-between items-center ${pathname === subItem.href ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted"}`}
                             >
                               {subItem.name}
-                              {subItem.subItems && <ChevronRight className="h-4 w-4" />}
+                              {'subItems' in subItem && subItem.subItems && <ChevronRight className="h-4 w-4" />}
                             </Link>
 
-                            {subItem.subItems && (
+                            {'subItems' in subItem && subItem.subItems && (
                               <div className="absolute left-full top-0 pt-0 pl-2 w-64 opacity-0 invisible group-hover/subitem:opacity-100 group-hover/subitem:visible transition-all duration-200 z-50">
                                 <div className="bg-background rounded-md shadow-md border p-2 flex flex-col gap-1">
-                                  {subItem.subItems.map((nestedItem) => (
+                                  {subItem.subItems.map((nestedItem: SubItem) => (
                                     <Link
                                       key={nestedItem.href}
                                       href={nestedItem.href}
@@ -393,4 +415,3 @@ export default function Navbar() {
     </header>
   )
 }
-

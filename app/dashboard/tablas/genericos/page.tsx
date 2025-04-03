@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -8,13 +8,19 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Plus, Pencil, Trash, FileSpreadsheet, ArrowLeft, Filter, RefreshCw, Printer } from "lucide-react"
 import Link from "next/link"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Pagination } from "@/components/pagination"
 import { EditDialog } from "@/components/edit-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { TableToolbar } from "@/components/table-toolbar"
+
+interface Generico {
+  GENERICO: string
+  NOMBRE: string
+  ACTIVO: string | number
+}
 
 export default function GenericosPage() {
-  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
@@ -23,63 +29,70 @@ export default function GenericosPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [genericos, setGenericos] = useState<Generico[]>([])
+  const [totalItems, setTotalItems] = useState(0)
+  const [loading, setLoading] = useState(false)
 
-  // Datos de ejemplo para genéricos
-  const genericosData = [
-    { id: "0001301", nombre: "ETILFRINA AMP", activo: "1" },
-    { id: "0001304", nombre: "ETINILESTRADIOL-LEVONORGESTREL 0.03/0.15MG CAJA", activo: "1" },
-    { id: "0001305", nombre: "ETIONAMIDA", activo: "1" },
-    { id: "0001307", nombre: "ETOPOSIDO", activo: "1" },
-    { id: "0001310", nombre: "EUCALIPTOL", activo: "1" },
-    { id: "0001312", nombre: "FEBUPROL", activo: "1" },
-    { id: "0001314", nombre: "FENILAMINARSÁN", activo: "1" },
-    { id: "0001316", nombre: "FENILAZODIAMINOPIRIDINA,CLORHI", activo: "1" },
-    { id: "0001317", nombre: "FENILEFRINA", activo: "1" },
-    { id: "0001324", nombre: "FENITOINA 250MG AMP", activo: "1" },
-    { id: "0001326", nombre: "FENOLFTALEINA", activo: "1" },
-    { id: "0001333", nombre: "SULFATO FERROSO GOTAS", activo: "1" },
-    { id: "0001335", nombre: "FLAVOXATO,CLORHIDRATO DE", activo: "1" },
-    { id: "0001337", nombre: "FLOROGLUCINOL", activo: "1" },
-    { id: "0001340", nombre: "FLUFENAMICO,ACIDO", activo: "1" },
-    // Agregar más datos para probar la paginación
-    ...Array.from({ length: 20 }, (_, i) => ({
-      id: `000${1350 + i}`,
-      nombre: `GENÉRICO DE PRUEBA ${i + 1}`,
-      activo: i % 3 === 0 ? "0" : "1",
-    })),
-  ]
+  // Función para cargar genéricos desde el backend
+  const loadGenericos = async () => {
+    setLoading(true)
+    try {
+      const skip = (currentPage - 1) * pageSize
+      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''
+      
+      // Obtener genéricos
+      const response = await fetch(`/api/tablas/genericos?take=${pageSize}&skip=${skip}${searchParam}`)
+      if (!response.ok) throw new Error('Error al cargar genéricos')
+      const data = await response.json()
+      setGenericos(data)
+      
+      try {
+        // Obtener total de genéricos para paginación
+        const countResponse = await fetch(`/api/tablas/genericos/count${searchParam ? `?${searchParam.substring(1)}` : ''}`)
+        if (!countResponse.ok) {
+          console.error('Error en la respuesta del conteo:', await countResponse.text())
+          throw new Error('Error al obtener el conteo de genéricos')
+        }
+        const { count } = await countResponse.json()
+        setTotalItems(count)
+      } catch (countError) {
+        console.error('Error al obtener el conteo:', countError)
+        // Si falla el conteo, usar la longitud de los datos como total
+        setTotalItems(data.length)
+      }
+    } catch (error) {
+      console.error('Error loading genericos:', error)
+      toast.error('Error al cargar los genéricos')
+      setGenericos([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // Filtrar genéricos basado en el término de búsqueda
-  const filteredGenericos = genericosData.filter(
-    (generico) =>
-      generico.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      generico.id.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Calcular datos paginados
-  const paginatedGenericos = filteredGenericos.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  // Cargar genéricos cuando cambia la página, el tamaño de página o el término de búsqueda
+  useEffect(() => {
+    loadGenericos()
+  }, [currentPage, pageSize, searchTerm])
 
   // Manejar selección de todos los items
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedItems([])
     } else {
-      setSelectedItems(paginatedGenericos.map((item) => item.id))
+      setSelectedItems(genericos.map((item) => item.GENERICO))
     }
     setSelectAll(!selectAll)
   }
 
   // Manejar selección individual
   const handleSelectItem = (id: string) => {
-    if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter((itemId) => itemId !== id))
-      setSelectAll(false)
-    } else {
-      setSelectedItems([...selectedItems, id])
-      if (selectedItems.length + 1 === paginatedGenericos.length) {
-        setSelectAll(true)
+    setSelectedItems(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id)
+      } else {
+        return [...prev, id]
       }
-    }
+    })
   }
 
   const handleRefresh = () => {
@@ -87,32 +100,23 @@ export default function GenericosPage() {
     setSelectedItems([])
     setSelectAll(false)
     setCurrentPage(1)
-    toast({
-      title: "Actualizado",
-      description: "La lista ha sido actualizada",
-    })
+    loadGenericos()
   }
 
   const handlePrint = () => {
-    toast({
-      title: "Imprimiendo",
-      description: "Enviando documento a la impresora",
-    })
+    toast.success('Enviando documento a la impresora')
   }
 
   const handleExport = () => {
-    toast({
-      title: "Exportando",
-      description: "Exportando datos a Excel",
-    })
+    toast.success('Exportando datos a Excel')
   }
 
   const handleEdit = () => {
     if (selectedItems.length !== 1) return
 
-    const itemToEdit = genericosData.find((item) => item.id === selectedItems[0])
+    const itemToEdit = genericos.find((item) => item.GENERICO === selectedItems[0])
     if (itemToEdit) {
-      setSelectedItem(itemToEdit.id)
+      setSelectedItem(itemToEdit.GENERICO)
       setEditDialogOpen(true)
     }
   }
@@ -127,26 +131,72 @@ export default function GenericosPage() {
     setConfirmDialogOpen(true)
   }
 
-  const handleSaveItem = (data: any) => {
-    if (selectedItem) {
-      toast({
-        title: "Genérico actualizado",
-        description: `El genérico ${data.nombre} ha sido actualizado correctamente`,
-      })
-    } else {
-      toast({
-        title: "Genérico creado",
-        description: `El genérico ${data.nombre} ha sido creado correctamente`,
-      })
+  const handleSaveItem = async (data: any) => {
+    try {
+      if (selectedItem) {
+        // Actualizar genérico existente
+        const response = await fetch(`/api/tablas/genericos/${selectedItem}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        
+        if (!response.ok) throw new Error('Error al actualizar el genérico')
+        
+        toast.success(`El genérico ${data.NOMBRE} ha sido actualizado correctamente`)
+      } else {
+        // Crear nuevo genérico
+        const response = await fetch('/api/tablas/genericos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        
+        if (!response.ok) throw new Error('Error al crear el genérico')
+        
+        toast.success(`El genérico ${data.NOMBRE} ha sido creado correctamente`)
+      }
+      
+      // Recargar datos
+      loadGenericos()
+      setEditDialogOpen(false)
+      setSelectedItem(null)
+      setSelectedItems([])
+    } catch (error) {
+      console.error('Error saving generico:', error)
+      toast.error(`Error al ${selectedItem ? 'actualizar' : 'crear'} el genérico`)
     }
-    setEditDialogOpen(false)
   }
 
-  const confirmDelete = () => {
-    toast({
-      title: "Genéricos eliminados",
-      description: `Se han eliminado ${selectedItems.length} genéricos correctamente`,
-    })
+  const confirmDelete = async () => {
+    try {
+      // Si hay múltiples elementos seleccionados, eliminarlos todos
+      if (selectedItems.length > 0) {
+        const deletePromises = selectedItems.map(id => 
+          fetch(`/api/tablas/genericos/${id}`, {
+            method: 'DELETE',
+          })
+        )
+        
+        const results = await Promise.all(deletePromises)
+        
+        // Verificar si todas las eliminaciones fueron exitosas
+        if (results.every(res => res.ok)) {
+          toast.success(`Se han eliminado ${selectedItems.length} genéricos correctamente`)
+          loadGenericos()
+        } else {
+          toast.error('Hubo errores al eliminar algunos genéricos')
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting genericos:', error)
+      toast.error('Error al eliminar los genéricos')
+    }
+    
     setSelectedItems([])
     setSelectAll(false)
     setConfirmDialogOpen(false)
@@ -154,66 +204,22 @@ export default function GenericosPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">Genéricos</h1>
-
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Input
-            placeholder="Buscar por nombre o código..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </div>
-
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filtros
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo
-          </Button>
-
-          <Button variant="outline" onClick={handleEdit} disabled={selectedItems.length !== 1}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-
-          <Button variant="outline" onClick={handleDelete} disabled={selectedItems.length === 0}>
-            <Trash className="h-4 w-4 mr-2" />
-            Eliminar
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualizar
-          </Button>
-
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
-
-          <Button variant="outline" onClick={handleExport}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-
-          <Link href="/dashboard/tablas">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <TableToolbar
+        title="Tabla de Genéricos"
+        searchPlaceholder="Buscar por código o nombre..."
+        searchQuery={searchTerm}
+        onSearchChange={setSearchTerm}
+        onRefresh={handleRefresh}
+        onNew={handleNew}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onPrint={handlePrint}
+        onExport={handleExport}
+        backUrl="/dashboard/tablas"
+        disableEdit={selectedItems.length !== 1}
+        disableDelete={selectedItems.length === 0}
+        newButtonText="Nuevo Genérico"
+      />
 
       <Card>
         <CardContent className="p-0">
@@ -230,27 +236,33 @@ export default function GenericosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedGenericos.length > 0 ? (
-                  paginatedGenericos.map((generico) => (
-                    <TableRow key={generico.id} className={selectedItems.includes(generico.id) ? "bg-primary/10" : ""}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedItems.includes(generico.id)}
-                          onCheckedChange={() => handleSelectItem(generico.id)}
-                          aria-label={`Seleccionar genérico ${generico.id}`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{generico.id}</TableCell>
-                      <TableCell>{generico.nombre}</TableCell>
-                      <TableCell>{generico.activo}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No se encontraron resultados.
+                {loading ? (
+                  <TableRow key="loading-row">
+                    <TableCell colSpan={4} className="text-center py-8">
+                      Cargando genéricos...
                     </TableCell>
                   </TableRow>
+                ) : genericos.length === 0 ? (
+                  <TableRow key="empty-row">
+                    <TableCell colSpan={4} className="text-center py-8">
+                      No se encontraron genéricos
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  genericos.map((generico) => (
+                    <TableRow key={generico.GENERICO} className={selectedItems.includes(generico.GENERICO) ? "bg-primary/10" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedItems.includes(generico.GENERICO)}
+                          onCheckedChange={() => handleSelectItem(generico.GENERICO)}
+                          aria-label={`Seleccionar genérico ${generico.GENERICO}`}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{generico.GENERICO}</TableCell>
+                      <TableCell>{generico.NOMBRE}</TableCell>
+                      <TableCell>{Number(generico.ACTIVO) === 1 ? "Sí" : "No"}</TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -259,7 +271,7 @@ export default function GenericosPage() {
       </Card>
 
       <Pagination
-        totalItems={filteredGenericos.length}
+        totalItems={totalItems}
         pageSize={pageSize}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
@@ -270,8 +282,32 @@ export default function GenericosPage() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSave={handleSaveItem}
-        type="genericos"
-        data={selectedItem ? genericosData.find((item) => item.id === selectedItem) : undefined}
+        title={selectedItem ? "Editar Genérico" : "Nuevo Genérico"}
+        fields={[
+          {
+            name: "GENERICO",
+            label: "Código",
+            type: "text",
+            required: true,
+            readOnly: !!selectedItem
+          },
+          {
+            name: "NOMBRE",
+            label: "Nombre",
+            type: "text",
+            required: true
+          },
+          {
+            name: "ACTIVO",
+            label: "Activo",
+            type: "select",
+            options: [
+              { value: "1", label: "Sí" },
+              { value: "0", label: "No" }
+            ]
+          }
+        ]}
+        data={selectedItem ? genericos.find((item) => item.GENERICO === selectedItem) : undefined}
       />
 
       <ConfirmDialog
@@ -285,4 +321,3 @@ export default function GenericosPage() {
     </div>
   )
 }
-

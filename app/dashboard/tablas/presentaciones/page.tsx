@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -8,118 +8,89 @@ import { TableToolbar } from "@/components/table-toolbar"
 import { Pagination } from "@/components/pagination"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { EditDialog } from "@/components/edit-dialog"
+import { toast } from "sonner"
+
+interface Presentacion {
+  PRESENTACION: string
+  NOMBRE: string
+  ACTIVO: string | number
+}
 
 export default function PresentacionesPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedItem, setSelectedItem] = useState<number | null>(null)
-  const [selectedItems, setSelectedItems] = useState<number[]>([])
+  const [selectedItem, setSelectedItem] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogMode, setDialogMode] = useState<"add" | "edit">("add")
-  const [currentItem, setCurrentItem] = useState({ codigo: "", nombre: "", activo: "1" })
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [presentaciones, setPresentaciones] = useState<Presentacion[]>([])
+  const [totalItems, setTotalItems] = useState(0)
+  const [loading, setLoading] = useState(false)
 
-  // Datos de ejemplo
-  const presentaciones = [
-    { id: 1, codigo: "0", nombre: "NINGUNO", activo: "1" },
-    { id: 2, codigo: "AER", nombre: "AEROSOL", activo: "1" },
-    { id: 3, codigo: "PCH", nombre: "PARCHE", activo: "1" },
-    { id: 4, codigo: "GRA", nombre: "GRANULOS", activo: "1" },
-    { id: 5, codigo: "BAR", nombre: "BARRA", activo: "1" },
-    { id: 6, codigo: "CHM", nombre: "CHAMPU", activo: "1" },
-    { id: 7, codigo: "CRM", nombre: "CREMA", activo: "1" },
-    { id: 8, codigo: "ELX", nombre: "ELIXIR", activo: "1" },
-    { id: 9, codigo: "GAS", nombre: "GAS", activo: "1" },
-    { id: 10, codigo: "GEL", nombre: "GEL", activo: "1" },
-    // Agregar más datos para probar la paginación
-    ...Array.from({ length: 30 }, (_, i) => ({
-      id: i + 11,
-      codigo: `COD${i + 1}`,
-      nombre: `PRESENTACIÓN ${i + 1}`,
-      activo: i % 3 === 0 ? "0" : "1",
-    })),
-  ]
+  // Función para cargar presentaciones desde el backend
+  const loadPresentaciones = async () => {
+    setLoading(true)
+    try {
+      const skip = (currentPage - 1) * pageSize
+      const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''
+      
+      // Obtener presentaciones
+      const response = await fetch(`/api/tablas/presentaciones?take=${pageSize}&skip=${skip}${searchParam}`)
+      if (!response.ok) throw new Error('Error al cargar presentaciones')
+      const data = await response.json()
+      setPresentaciones(data)
+      
+      try {
+        // Obtener total de presentaciones para paginación
+        const countResponse = await fetch(`/api/tablas/presentaciones/count${searchParam ? `?${searchParam.substring(1)}` : ''}`)
+        if (!countResponse.ok) {
+          console.error('Error en la respuesta del conteo:', await countResponse.text())
+          throw new Error('Error al obtener el conteo de presentaciones')
+        }
+        const { count } = await countResponse.json()
+        setTotalItems(count)
+      } catch (countError) {
+        console.error('Error al obtener el conteo:', countError)
+        // Si falla el conteo, usar la longitud de los datos como total
+        setTotalItems(data.length)
+      }
+    } catch (error) {
+      console.error('Error loading presentaciones:', error)
+      toast.error('Error al cargar las presentaciones')
+      setPresentaciones([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // Filtrar presentaciones basado en el término de búsqueda
-  const filteredPresentaciones = presentaciones.filter(
-    (presentacion) =>
-      presentacion.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      presentacion.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Calcular datos paginados
-  const paginatedPresentaciones = filteredPresentaciones.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  // Cargar presentaciones cuando cambia la página, el tamaño de página o el término de búsqueda
+  useEffect(() => {
+    loadPresentaciones()
+  }, [currentPage, pageSize, searchTerm])
 
   // Manejar selección de todos los items
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedItems([])
     } else {
-      setSelectedItems(paginatedPresentaciones.map((item) => item.id))
+      setSelectedItems(presentaciones.map((item) => item.PRESENTACION))
     }
     setSelectAll(!selectAll)
   }
 
   // Manejar selección individual
-  const handleSelectItem = (id: number) => {
+  const handleSelectItem = (id: string) => {
     if (selectedItems.includes(id)) {
       setSelectedItems(selectedItems.filter((itemId) => itemId !== id))
       setSelectAll(false)
     } else {
       setSelectedItems([...selectedItems, id])
-      if (selectedItems.length + 1 === paginatedPresentaciones.length) {
+      if (selectedItems.length + 1 === presentaciones.length) {
         setSelectAll(true)
       }
     }
-  }
-
-  // Funciones para la barra de herramientas
-  const handleNew = () => {
-    setDialogMode("add")
-    setCurrentItem({ codigo: "", nombre: "", activo: "1" })
-    setEditDialogOpen(true)
-  }
-
-  const handleEdit = () => {
-    if (selectedItems.length === 1) {
-      const item = presentaciones.find((p) => p.id === selectedItems[0])
-      if (item) {
-        setDialogMode("edit")
-        setCurrentItem({
-          codigo: item.codigo,
-          nombre: item.nombre,
-          activo: item.activo,
-        })
-        setEditDialogOpen(true)
-      }
-    }
-  }
-
-  const handleDelete = () => {
-    if (selectedItems.length > 0) {
-      setConfirmDialogOpen(true)
-    }
-  }
-
-  const confirmDelete = () => {
-    // Aquí iría la lógica para eliminar los elementos seleccionados
-    console.log(`Eliminando ${selectedItems.length} presentaciones`)
-    setSelectedItems([])
-    setSelectAll(false)
-    setConfirmDialogOpen(false)
-  }
-
-  const handlePrint = () => {
-    // Aquí iría la lógica para imprimir
-    alert("Imprimiendo presentaciones")
-  }
-
-  const handleExcel = () => {
-    // Aquí iría la lógica para exportar a Excel
-    alert("Exportando a Excel")
   }
 
   const handleRefresh = () => {
@@ -127,16 +98,101 @@ export default function PresentacionesPage() {
     setSelectedItems([])
     setSelectAll(false)
     setCurrentPage(1)
+    loadPresentaciones()
   }
 
-  const handleSave = (data: any) => {
-    // Aquí iría la lógica para guardar
-    if (dialogMode === "add") {
-      alert(`Agregando nueva presentación: ${data.codigo} - ${data.nombre}`)
-    } else {
-      alert(`Editando presentación: ${data.codigo} - ${data.nombre}`)
+  const handlePrint = () => {
+    toast.success('Enviando documento a la impresora')
+  }
+
+  const handleExcel = () => {
+    toast.success('Exportando datos a Excel')
+  }
+
+  const handleEdit = () => {
+    if (selectedItems.length !== 1) return
+
+    const itemToEdit = presentaciones.find((item) => item.PRESENTACION === selectedItems[0])
+    if (itemToEdit) {
+      setSelectedItem(itemToEdit.PRESENTACION)
+      setEditDialogOpen(true)
     }
-    setEditDialogOpen(false)
+  }
+
+  const handleNew = () => {
+    setSelectedItem(null)
+    setEditDialogOpen(true)
+  }
+
+  const handleDelete = () => {
+    if (selectedItems.length === 0) return
+    setConfirmDialogOpen(true)
+  }
+
+  const handleSaveItem = async (data: any) => {
+    try {
+      if (selectedItem) {
+        // Actualizar presentación existente
+        const response = await fetch(`/api/tablas/presentaciones/${selectedItem}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        
+        if (!response.ok) throw new Error('Error al actualizar la presentación')
+        
+        toast.success(`La presentación ${data.NOMBRE} ha sido actualizada correctamente`)
+      } else {
+        // Crear nueva presentación
+        const response = await fetch('/api/tablas/presentaciones', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        
+        if (!response.ok) throw new Error('Error al crear la presentación')
+        
+        toast.success(`La presentación ${data.NOMBRE} ha sido creada correctamente`)
+      }
+      
+      // Recargar datos
+      loadPresentaciones()
+      setEditDialogOpen(false)
+      setSelectedItem(null)
+      setSelectedItems([])
+    } catch (error) {
+      console.error('Error saving presentacion:', error)
+      toast.error(`Error al ${selectedItem ? 'actualizar' : 'crear'} la presentación`)
+    }
+  }
+
+  const confirmDelete = async () => {
+    try {
+      // Si hay múltiples elementos seleccionados, eliminarlos todos
+      if (selectedItems.length > 0) {
+        const deletePromises = selectedItems.map(id => 
+          fetch(`/api/tablas/presentaciones/${id}`, {
+            method: 'DELETE',
+          })
+        )
+        
+        await Promise.all(deletePromises)
+        
+        toast.success(`Se han eliminado ${selectedItems.length} presentaciones correctamente`)
+        loadPresentaciones()
+      }
+    } catch (error) {
+      console.error('Error deleting presentaciones:', error)
+      toast.error('Error al eliminar las presentaciones')
+    }
+    
+    setSelectedItems([])
+    setSelectAll(false)
+    setConfirmDialogOpen(false)
   }
 
   return (
@@ -144,15 +200,15 @@ export default function PresentacionesPage() {
       <TableToolbar
         title="Tabla de Presentaciones"
         searchPlaceholder="Buscar por código o nombre..."
-        searchTerm={searchTerm}
+        searchQuery={searchTerm}
         onSearchChange={setSearchTerm}
         onRefresh={handleRefresh}
         onNew={handleNew}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onPrint={handlePrint}
-        onExcel={handleExcel}
-        backHref="/dashboard/tablas"
+        onExport={handleExcel}
+        backUrl="/dashboard/tablas"
         disableEdit={selectedItems.length !== 1}
         disableDelete={selectedItems.length === 0}
         newButtonText="Nueva Presentación"
@@ -173,30 +229,36 @@ export default function PresentacionesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedPresentaciones.length > 0 ? (
-                  paginatedPresentaciones.map((presentacion) => (
+                {loading ? (
+                  <TableRow key="loading-row">
+                    <TableCell colSpan={4} className="text-center py-8">
+                      Cargando presentaciones...
+                    </TableCell>
+                  </TableRow>
+                ) : presentaciones.length === 0 ? (
+                  <TableRow key="empty-row">
+                    <TableCell colSpan={4} className="text-center py-8">
+                      No se encontraron presentaciones
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  presentaciones.map((presentacion) => (
                     <TableRow
-                      key={presentacion.id}
-                      className={selectedItems.includes(presentacion.id) ? "bg-primary/10" : ""}
+                      key={presentacion.PRESENTACION}
+                      className={selectedItems.includes(presentacion.PRESENTACION) ? "bg-primary/10" : ""}
                     >
                       <TableCell>
                         <Checkbox
-                          checked={selectedItems.includes(presentacion.id)}
-                          onCheckedChange={() => handleSelectItem(presentacion.id)}
-                          aria-label={`Seleccionar presentación ${presentacion.codigo}`}
+                          checked={selectedItems.includes(presentacion.PRESENTACION)}
+                          onCheckedChange={() => handleSelectItem(presentacion.PRESENTACION)}
+                          aria-label={`Seleccionar presentación ${presentacion.PRESENTACION}`}
                         />
                       </TableCell>
-                      <TableCell onClick={() => setSelectedItem(presentacion.id)}>{presentacion.codigo}</TableCell>
-                      <TableCell onClick={() => setSelectedItem(presentacion.id)}>{presentacion.nombre}</TableCell>
-                      <TableCell onClick={() => setSelectedItem(presentacion.id)}>{presentacion.activo}</TableCell>
+                      <TableCell onClick={() => setSelectedItem(presentacion.PRESENTACION)}>{presentacion.PRESENTACION}</TableCell>
+                      <TableCell onClick={() => setSelectedItem(presentacion.PRESENTACION)}>{presentacion.NOMBRE}</TableCell>
+                      <TableCell onClick={() => setSelectedItem(presentacion.PRESENTACION)}>{presentacion.ACTIVO}</TableCell>
                     </TableRow>
                   ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No se encontraron resultados.
-                    </TableCell>
-                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -205,7 +267,7 @@ export default function PresentacionesPage() {
       </Card>
 
       <Pagination
-        totalItems={filteredPresentaciones.length}
+        totalItems={totalItems}
         pageSize={pageSize}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
@@ -215,9 +277,9 @@ export default function PresentacionesPage() {
       <EditDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        onSave={handleSave}
+        onSave={handleSaveItem}
         type="presentaciones"
-        data={dialogMode === "edit" ? currentItem : undefined}
+        data={selectedItem ? presentaciones.find((item) => item.PRESENTACION === selectedItem) : undefined}
       />
 
       <ConfirmDialog
@@ -231,4 +293,3 @@ export default function PresentacionesPage() {
     </div>
   )
 }
-

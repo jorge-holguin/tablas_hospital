@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Hospital, Lock, User } from "lucide-react"
+import { setCookie } from "cookies-next"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,25 +19,41 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
-    // Simular verificación de credenciales
-    setTimeout(() => {
-      if (username === "admin" && password === "1234") {
-        // Simular almacenamiento de token JWT
-        if (typeof window !== "undefined") {
-          localStorage.setItem("hospital-auth-token", "mock-jwt-token-12345")
-          localStorage.setItem("hospital-user", JSON.stringify({ name: "Administrador", role: "admin" }))
-        }
-        router.push("/dashboard")
-      } else {
-        setError("Usuario o contraseña incorrectos")
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al iniciar sesión')
       }
+
+      // Guardar token en cookie para que el middleware lo pueda leer
+      setCookie('token', data.token)
+      
+      // Guardar información del usuario en localStorage para uso en la UI
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hospital-user", JSON.stringify(data.user))
+      }
+      
+      router.push("/dashboard")
+    } catch (error) {
+      console.error('Error de login:', error)
+      setError(error instanceof Error ? error.message : 'Usuario o contraseña incorrectos')
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -101,15 +118,14 @@ export default function LoginPage() {
             </form>
           </CardContent>
           <CardFooter className="flex justify-center text-sm text-muted-foreground">
-            <p>Credenciales de prueba: admin / 1234</p>
+            <p>Sistema de Farmacia - SIGSALUD</p>
           </CardFooter>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Hospital José Agurto Tello. Todos los derechos reservados.
+          {new Date().getFullYear()} Hospital José Agurto Tello. Todos los derechos reservados.
         </p>
       </div>
     </div>
   )
 }
-

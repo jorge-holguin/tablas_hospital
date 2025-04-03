@@ -5,82 +5,114 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+interface FieldConfig {
+  name: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'date' | 'textarea'
+  required?: boolean
+  readOnly?: boolean
+  options?: { value: string; label: string }[]
+}
 
 interface EditDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave: (data: any) => void
-  type: string
+  title?: string
+  defaultValues?: any
+  fields?: FieldConfig[]
+  type?: string
   data?: any
 }
 
-export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialogProps) {
+export function EditDialog({ 
+  open, 
+  onOpenChange, 
+  onSave, 
+  title = "Editar", 
+  defaultValues = {}, 
+  fields = [],
+  type,
+  data 
+}: EditDialogProps) {
   const [formData, setFormData] = useState<any>({})
 
   useEffect(() => {
-    if (data) {
-      setFormData({ ...data })
-    } else {
-      // Valores por defecto según el tipo
-      switch (type) {
-        case "genericos":
-          setFormData({ id: "", nombre: "", activo: "1" })
-          break
-        case "laboratorios":
-          setFormData({ codigo: "", nombre: "", ruc: "", direccion: "", telefono: "", activo: "1" })
-          break
-        case "tipoAtencion":
-          setFormData({ codigo: "", nombre: "", activo: "1" })
-          break
-        case "items":
-          setFormData({
-            codigo: "",
-            nombre: "",
-            codigoSismed: "",
-            tipoPrograma: "",
-            aplicaDescuento: "S",
-            formaFarmaceutica: "",
-            clase: "",
-            presentacion: "",
-            concentracion: "",
-            familia: "",
-          })
-          break
-        case "familias":
-          setFormData({ codigo: "", nombre: "", activo: "1" })
-          break
-        case "presentaciones":
-          setFormData({ codigo: "", nombre: "", activo: "1" })
-          break
-        case "precios":
-          setFormData({
-            item: data?.item || "",
-            nombre: data?.nombre || "",
-            fecha: new Date().toLocaleDateString("es-ES"),
-            hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-            costo: "0",
-            utilidad: "0",
-            precioPub: "0",
-            descuento: "0",
-            precioVenta: "0",
-          })
-          break
-        case "clases":
-          setFormData({ codigo: "", nombre: "", activo: "1" })
-          break
-        case "proveedores":
-          setFormData({ codigo: "", nombre: "", ruc: "", direccion: "", telefono: "", activo: "1" })
-          break
-        case "almacenes":
-          setFormData({ codigo: "", nombre: "", activo: "1" })
-          break
-        default:
-          setFormData({})
+    // Only initialize form data when the dialog opens
+    if (open) {
+      let initialData = {}
+      
+      if (fields.length > 0 && defaultValues) {
+        initialData = { ...defaultValues }
+      } else if (data) {
+        initialData = { ...data }
+      } else if (type) {
+        // Valores por defecto según el tipo
+        switch (type) {
+          case "genericos":
+            initialData = { GENERICO: "", NOMBRE: "", ACTIVO: "1" }
+            break
+          case "laboratorios":
+            initialData = { codigo: "", nombre: "", ruc: "", direccion: "", telefono: "", activo: "1" }
+            break
+          case "tipoAtencion":
+            initialData = { codigo: "", nombre: "", activo: "1" }
+            break
+          case "items":
+            initialData = {
+              codigo: "",
+              nombre: "",
+              codigoSismed: "",
+              tipoPrograma: "",
+              aplicaDescuento: "S",
+              formaFarmaceutica: "",
+              clase: "",
+              presentacion: "",
+              concentracion: "",
+              familia: "",
+            }
+            break
+          case "familias":
+            initialData = { codigo: "", nombre: "", activo: "1" }
+            break
+          case "presentaciones":
+            initialData = { PRESENTACION: "", NOMBRE: "", ACTIVO: "1" }
+            break
+          case "precios":
+            initialData = {
+              item: data?.item || "",
+              nombre: data?.nombre || "",
+              fecha: new Date().toLocaleDateString("es-ES"),
+              hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+              costo: "0",
+              utilidad: "0",
+              precioPub: "0",
+              descuento: "0",
+              precioVenta: "0",
+            }
+            break
+          case "clases":
+            initialData = { codigo: "", nombre: "", activo: "1" }
+            break
+          case "proveedores":
+            initialData = { codigo: "", nombre: "", ruc: "", direccion: "", telefono: "", activo: "1" }
+            break
+          case "almacenes":
+            initialData = { codigo: "", nombre: "", activo: "1" }
+            break
+          default:
+            initialData = {}
+        }
       }
+      
+      // Use a functional update to avoid dependency on formData
+      setFormData(initialData)
     }
-  }, [data, type, open])
+  }, [open]) // Only depend on the open state
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | number) => {
     setFormData({ ...formData, [field]: value })
   }
 
@@ -88,41 +120,115 @@ export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialo
     onSave(formData)
   }
 
+  const renderField = (field: FieldConfig) => {
+    const value = formData[field.name] !== undefined ? formData[field.name] : ''
+    
+    switch (field.type) {
+      case 'select':
+        return (
+          <div className="grid grid-cols-4 items-center gap-4" key={field.name}>
+            <Label htmlFor={field.name} className="text-right">
+              {field.label}
+            </Label>
+            <div className="col-span-3">
+              <Select 
+                value={String(value)} 
+                onValueChange={(val) => handleChange(field.name, val)}
+                disabled={field.readOnly}
+              >
+                <SelectTrigger id={field.name}>
+                  <SelectValue placeholder={`Seleccione ${field.label}`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {field.options?.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )
+      
+      case 'number':
+        return (
+          <div className="grid grid-cols-4 items-center gap-4" key={field.name}>
+            <Label htmlFor={field.name} className="text-right">
+              {field.label}
+            </Label>
+            <Input
+              id={field.name}
+              type="number"
+              value={value}
+              onChange={(e) => handleChange(field.name, e.target.value)}
+              className="col-span-3"
+              required={field.required}
+              readOnly={field.readOnly}
+            />
+          </div>
+        )
+      
+      default:
+        return (
+          <div className="grid grid-cols-4 items-center gap-4" key={field.name}>
+            <Label htmlFor={field.name} className="text-right">
+              {field.label}
+            </Label>
+            <Input
+              id={field.name}
+              value={value}
+              onChange={(e) => handleChange(field.name, e.target.value)}
+              className="col-span-3"
+              required={field.required}
+              readOnly={field.readOnly}
+            />
+          </div>
+        )
+    }
+  }
+
   const renderFields = () => {
+    // If we have fields config, use that
+    if (fields.length > 0) {
+      return fields.map(field => renderField(field))
+    }
+    
+    // Otherwise use the legacy type-based rendering
     switch (type) {
       case "genericos":
         return (
           <>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="codigo" className="text-right">
+              <Label htmlFor="GENERICO" className="text-right">
                 Código
               </Label>
               <Input
-                id="codigo"
-                value={formData.id || ""}
-                onChange={(e) => handleChange("id", e.target.value)}
+                id="GENERICO"
+                value={formData.GENERICO || ""}
+                onChange={(e) => handleChange("GENERICO", e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nombre" className="text-right">
+              <Label htmlFor="NOMBRE" className="text-right">
                 Nombre
               </Label>
               <Input
-                id="nombre"
-                value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                id="NOMBRE"
+                value={formData.NOMBRE || ""}
+                onChange={(e) => handleChange("NOMBRE", e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="activo" className="text-right">
+              <Label htmlFor="ACTIVO" className="text-right">
                 Activo?
               </Label>
               <Input
-                id="activo"
-                value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                id="ACTIVO"
+                value={formData.ACTIVO || "1"}
+                onChange={(e) => handleChange("ACTIVO", e.target.value)}
                 className="col-span-3"
               />
             </div>
@@ -144,11 +250,11 @@ export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialo
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="razonSocial" className="text-right">
+              <Label htmlFor="nombre" className="text-right">
                 Razón Social
               </Label>
               <Input
-                id="razonSocial"
+                id="nombre"
                 value={formData.nombre || ""}
                 onChange={(e) => handleChange("nombre", e.target.value)}
                 className="col-span-3"
@@ -244,11 +350,11 @@ export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialo
         return (
           <>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="codigoInterno" className="text-right">
+              <Label htmlFor="codigo" className="text-right">
                 Código Interno
               </Label>
               <Input
-                id="codigoInterno"
+                id="codigo"
                 value={formData.codigo || ""}
                 onChange={(e) => handleChange("codigo", e.target.value)}
                 className="col-span-3"
@@ -399,35 +505,35 @@ export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialo
         return (
           <>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="codigo" className="text-right">
-                Código
+              <Label htmlFor="PRESENTACION" className="text-right">
+                Presentación
               </Label>
               <Input
-                id="codigo"
-                value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                id="PRESENTACION"
+                value={formData.PRESENTACION || ""}
+                onChange={(e) => handleChange("PRESENTACION", e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nombre" className="text-right">
+              <Label htmlFor="NOMBRE" className="text-right">
                 Nombre
               </Label>
               <Input
-                id="nombre"
-                value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                id="NOMBRE"
+                value={formData.NOMBRE || ""}
+                onChange={(e) => handleChange("NOMBRE", e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="activo" className="text-right">
+              <Label htmlFor="ACTIVO" className="text-right">
                 Activo?
               </Label>
               <Input
-                id="activo"
-                value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                id="ACTIVO"
+                value={formData.ACTIVO || "1"}
+                onChange={(e) => handleChange("ACTIVO", e.target.value)}
                 className="col-span-3"
               />
             </div>
@@ -600,11 +706,11 @@ export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialo
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="razonSocial" className="text-right">
+              <Label htmlFor="nombre" className="text-right">
                 Razón Social
               </Label>
               <Input
-                id="razonSocial"
+                id="nombre"
                 value={formData.nombre || ""}
                 onChange={(e) => handleChange("nombre", e.target.value)}
                 className="col-span-3"
@@ -701,49 +807,24 @@ export function EditDialog({ open, onOpenChange, onSave, type, data }: EditDialo
     }
   }
 
-  const getDialogTitle = () => {
-    const action = data ? "Editar" : "Nuevo"
-    switch (type) {
-      case "genericos":
-        return `${action} Genérico`
-      case "laboratorios":
-        return `${action} Laboratorio`
-      case "tipoAtencion":
-        return `${action} Tipo de Atención`
-      case "items":
-        return `${action} Item`
-      case "familias":
-        return `${action} Familia`
-      case "presentaciones":
-        return `${action} Presentación`
-      case "precios":
-        return `${action} Precio`
-      case "clases":
-        return `${action} Clase`
-      case "proveedores":
-        return `${action} Proveedor`
-      case "almacenes":
-        return `${action} Almacén`
-      default:
-        return `${action} Registro`
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{getDialogTitle()}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">{renderFields()}</div>
+        <div className="grid gap-4 py-4">
+          {renderFields()}
+        </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave}>Aceptar</Button>
+          <Button type="button" onClick={handleSave}>
+            Guardar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

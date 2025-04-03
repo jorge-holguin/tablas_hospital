@@ -1,8 +1,7 @@
 "use client"
 
-import type React from "react"
+import React, { useState, useEffect } from "react"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RefreshCw, Printer, FileSpreadsheet, ArrowLeft, Plus, Pencil, Trash2, Filter } from "lucide-react"
@@ -12,6 +11,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog"
 interface TableToolbarProps {
   title?: string
   searchPlaceholder?: string
+  searchQuery?: string
   backUrl?: string
   showNewButton?: boolean
   showEditButton?: boolean
@@ -21,6 +21,7 @@ interface TableToolbarProps {
   disableEdit?: boolean
   disableDelete?: boolean
   onSearch?: (query: string) => void
+  onSearchChange?: (query: string) => void
   onRefresh?: () => void
   onNew?: () => void
   onEdit?: () => void
@@ -33,6 +34,7 @@ interface TableToolbarProps {
 export function TableToolbar({
   title,
   searchPlaceholder = "Buscar por código o descripción...",
+  searchQuery = "",
   backUrl = "/dashboard/tablas",
   showNewButton = true,
   showEditButton = true,
@@ -42,6 +44,7 @@ export function TableToolbar({
   disableEdit = true,
   disableDelete = true,
   onSearch,
+  onSearchChange,
   onRefresh,
   onNew,
   onEdit,
@@ -50,13 +53,19 @@ export function TableToolbar({
   onExport,
   onFilter,
 }: TableToolbarProps) {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value)
+    const value = e.target.value
+    setInternalSearchQuery(value)
+    
+    if (onSearchChange) {
+      onSearchChange(value)
+    }
+    
     if (onSearch) {
-      onSearch(e.target.value)
+      onSearch(value)
     }
   }
 
@@ -71,6 +80,10 @@ export function TableToolbar({
     setConfirmDialogOpen(false)
   }
 
+  useEffect(() => {
+    setInternalSearchQuery(searchQuery)
+  }, [searchQuery])
+
   return (
     <div className="space-y-4">
       {title && <h1 className="text-2xl font-bold tracking-tight">{title}</h1>}
@@ -82,7 +95,7 @@ export function TableToolbar({
               type="search"
               placeholder={searchPlaceholder}
               className="w-full"
-              value={searchQuery}
+              value={internalSearchQuery}
               onChange={handleSearch}
             />
           </div>
@@ -157,4 +170,3 @@ export function TableToolbar({
     </div>
   )
 }
-
