@@ -5,7 +5,6 @@ import { DataProvider } from "@/components/utils/data-provider"
 import { EditDialog } from "@/components/edit-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { ColumnDef } from "@tanstack/react-table"
-import { useState } from "react"
 
 interface Clase {
   CLASE: string
@@ -121,10 +120,11 @@ export default function ClasesPage() {
               onOpenChange={setEditDialogOpen}
               title={selectedItems.length === 1 ? "Editar Clase" : "Nueva Clase"}
               defaultValues={defaultValues}
-              selectedItem={selectedItems.length === 1 ? selectedItems[0] : null}
+              selectedItem={selectedItems[0] || null}
+              data={data}
               onSave={handleSaveItem}
               fields={[
-                { name: "CLASE", label: "Código", type: "text", required: true, readOnly: selectedItems.length === 1 },
+                { name: "CLASE", label: "Clase", type: "text", required: true },
                 { name: "NOMBRE", label: "Nombre", type: "text", required: true },
                 { 
                   name: "ACTIVO", 

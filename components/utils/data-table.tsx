@@ -316,13 +316,13 @@ export function DataTable<T>({
                         {idField && setSelectedRows && (
                           <TableCell>
                             <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => {
+                              checked={!!isSelected}
+                              onCheckedChange={(checked) => {
                                 if (id) {
-                                  if (isSelected) {
-                                    setSelectedRows(selectedRows.filter(itemId => itemId !== id))
-                                  } else {
+                                  if (checked === true) {
                                     setSelectedRows([...selectedRows, id])
+                                  } else {
+                                    setSelectedRows(selectedRows.filter(itemId => itemId !== id))
                                   }
                                 }
                               }}

@@ -187,7 +187,11 @@ export function DataProvider<T extends Record<string, any>>({
         body: JSON.stringify(formData),
       })
       
-      if (!response.ok) throw new Error(`Error al crear ${apiEndpoint}`)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || `Error al crear ${apiEndpoint}`)
+      }
       
       toast({
         title: "Creado",
@@ -209,12 +213,16 @@ export function DataProvider<T extends Record<string, any>>({
 
   const confirmDelete = async () => {
     try {
-      // Si hay múltiples elementos seleccionados, eliminarlos uno por uno
-      const deletePromises = selectedItems.map(id => 
-        fetch(`/api/tablas/${apiEndpoint}/${id}`, {
+      const deletePromises = selectedItems.map(async id => {
+        const response = await fetch(`/api/tablas/${apiEndpoint}/${id}`, {
           method: 'DELETE',
         })
-      )
+        
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.message || `Error al eliminar ${apiEndpoint}`)
+        }
+      })
       
       await Promise.all(deletePromises)
       
