@@ -5,8 +5,6 @@ interface DataProviderProps<T extends Record<string, any>> {
   apiEndpoint: string
   idField: string
   defaultValues: Partial<T>
-  onPrint?: (data: T[]) => Promise<void>
-  onExport?: (data: T[]) => void
   children: (props: {
     data: T[]
     loading: boolean
@@ -21,8 +19,6 @@ interface DataProviderProps<T extends Record<string, any>> {
     setFilterActive: (active: string | null) => void
     selectedItems: string[]
     setSelectedItems: (items: string[]) => void
-    selectedItem: string | null
-    setSelectedItem: (item: string | null) => void
     selectAll: boolean
     setSelectAll: (selectAll: boolean) => void
     handleSelectAll: () => void
@@ -37,32 +33,28 @@ interface DataProviderProps<T extends Record<string, any>> {
     setEditDialogOpen: (open: boolean) => void
     confirmDialogOpen: boolean
     setConfirmDialogOpen: (open: boolean) => void
-    onPrint?: () => Promise<void>
-    onExport?: () => void
+    loadData: () => void
   }) => React.ReactNode
 }
 
 export function DataProvider<T extends Record<string, any>>({ 
   apiEndpoint, 
   idField, 
-  defaultValues, 
-  onPrint,
-  onExport,
+  defaultValues,
   children 
 }: DataProviderProps<T>) {
   const { toast } = useToast()
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(false)
+  const [totalItems, setTotalItems] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedItem, setSelectedItem] = useState<string | null>(null)
+  const [filterActive, setFilterActive] = useState<string | null>(null)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [totalItems, setTotalItems] = useState(0)
-  const [filterActive, setFilterActive] = useState<string | null>(null)
 
   // Función para cargar los datos desde la API
   const loadData = async () => {
@@ -168,7 +160,6 @@ export function DataProvider<T extends Record<string, any>>({
   }
 
   const handleNew = () => {
-    setSelectedItem(null)
     setEditDialogOpen(true)
   }
 
@@ -177,7 +168,6 @@ export function DataProvider<T extends Record<string, any>>({
 
     const itemToEdit = data.find((item: T) => item[idField] === selectedItems[0])
     if (itemToEdit) {
-      setSelectedItem(itemToEdit[idField] as string)
       setEditDialogOpen(true)
     }
   }
@@ -189,39 +179,20 @@ export function DataProvider<T extends Record<string, any>>({
 
   const handleSaveItem = async (formData: any) => {
     try {
-      if (selectedItem) {
-        // Actualizar item existente
-        const response = await fetch(`/api/tablas/${apiEndpoint}/${selectedItem}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        })
-        
-        if (!response.ok) throw new Error(`Error al actualizar ${apiEndpoint}`)
-        
-        toast({
-          title: "Actualizado",
-          description: `El registro ha sido actualizado correctamente`,
-        })
-      } else {
-        // Crear nuevo item
-        const response = await fetch(`/api/tablas/${apiEndpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        })
-        
-        if (!response.ok) throw new Error(`Error al crear ${apiEndpoint}`)
-        
-        toast({
-          title: "Creado",
-          description: `El registro ha sido creado correctamente`,
-        })
-      }
+      const response = await fetch(`/api/tablas/${apiEndpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      
+      if (!response.ok) throw new Error(`Error al crear ${apiEndpoint}`)
+      
+      toast({
+        title: "Creado",
+        description: `El registro ha sido creado correctamente`,
+      })
       
       // Recargar datos después de guardar
       loadData()
@@ -281,8 +252,6 @@ export function DataProvider<T extends Record<string, any>>({
     setFilterActive,
     selectedItems,
     setSelectedItems,
-    selectedItem,
-    setSelectedItem,
     selectAll,
     setSelectAll,
     handleSelectAll,
@@ -297,7 +266,6 @@ export function DataProvider<T extends Record<string, any>>({
     setEditDialogOpen,
     confirmDialogOpen,
     setConfirmDialogOpen,
-    onPrint: onPrint ? () => onPrint(data) : undefined,
-    onExport: onExport ? () => onExport(data) : undefined
+    loadData
   })
 }
