@@ -9,10 +9,33 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const take = searchParams.get('take') ? Number(searchParams.get('take')) : 10
     const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0
+    const search = searchParams.get('search') || ''
+    const active = searchParams.get('active')
     
-    const familias = await familiaService.findAll({ take, skip })
+    let where: Prisma.FAMILIAWhereInput = {}
+    
+    // Add search filter if provided
+    if (search) {
+      where = {
+        OR: [
+          { FAMILIA: { contains: search } },
+          { NOMBRE: { contains: search } }
+        ]
+      }
+    }
+    
+    // Add active filter if provided
+    if (active !== null && active !== undefined) {
+      where = {
+        ...where,
+        ACTIVO: active
+      }
+    }
+    
+    const familias = await familiaService.findAll({ take, skip, where })
     return NextResponse.json(familias)
   } catch (error) {
+    console.error('Error fetching familias:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

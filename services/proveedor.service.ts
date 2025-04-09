@@ -41,4 +41,13 @@ export class ProveedorService {
       where: { PROVEEDOR: id },
     })
   }
+
+  async count(params: {
+    where?: Prisma.PROVEEDORWhereInput
+  }) {
+    const { where } = params
+    return prisma.pROVEEDOR.count({
+      where,
+    })
+  }
 }

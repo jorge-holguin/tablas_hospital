@@ -1,121 +1,132 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Edit, Printer, FileSpreadsheet, ArrowLeft, FileEdit } from "lucide-react"
-import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Edit, FileEdit, FileSpreadsheet, Printer } from "lucide-react"
+import Link from "next/link"
+import { Search, ArrowLeft } from "lucide-react"
+
+// Define interfaces for the data structures
+interface Item {
+  id: number
+  codigo: string
+  descripcion: string
+  presentacion: string
+  tipo_producto: string
+  concentracion: string
+  cod_sismed: string
+  nom_sismed: string
+  fraccion: string
+  variable: string
+  activo: string
+  modulo: string
+}
+
+interface Precio {
+  IDRECORD: number
+  ITEM: string
+  FECHA: string
+  HORA: string
+  PROMEDIO: number | string
+  COSTO: number | string
+  UTILIDAD: number | string
+  PRECIOPUB: number | string
+  DESCUENTO: number | string
+  PRECIO: number | string
+  SYSINSERT: string
+  SYSUPDATE: string | null
+  INGRESOID: string
+  DOCUMENTO: string
+}
 
 export default function PreciosPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedItem, setSelectedItem] = useState<number | null>(null)
-  const [activeTab, setActiveTab] = useState("items")
+  const [selectedItem, setSelectedItem] = useState<string | null>("172091") // Default to item with codigo 172091
+  const [activeTab, setActiveTab] = useState("precios") // Default to precios tab
   const [selectedItems, setSelectedItems] = useState<number[]>([])
   const [selectAll, setSelectAll] = useState(false)
+  const [loadingItems, setLoadingItems] = useState(true)
+  const [loadingPrecios, setLoadingPrecios] = useState(true)
+  const [items, setItems] = useState<Item[]>([])
+  const [precios, setPrecios] = useState<Precio[]>([])
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPrecios, setTotalPrecios] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
-  // Datos de ejemplo para items
-  const items = [
-    {
-      id: 1,
-      codigo: "172091",
-      descripcion: "(CENARES) ALCOHOL ETÍLICO (ETANOL) 70° 1 L",
-      presentacion: "SOL",
-      tipo_producto: "INSUMOS MEDICOS A $70°",
-      concentra: "70°",
-      cod_sismed: "10221",
-      nom_sismed: "ALCOHOL ETILICO (ETA)",
-      fraccion: "1",
-      variable: "N",
-      activo: "1",
-      modulo: "FARMACIA",
-    },
-    {
-      id: 2,
-      codigo: "172552",
-      descripcion: "(CENARES) ALGODÓN HIDRÓFILO 500 g",
-      presentacion: "UNI",
-      tipo_producto: "INSUMOS MEDICOS A $",
-      concentra: "",
-      cod_sismed: "10249",
-      nom_sismed: "ALGODON HIDROFILO",
-      fraccion: "1",
-      variable: "N",
-      activo: "1",
-      modulo: "FARMACIA",
-    },
-    {
-      id: 3,
-      codigo: "172045",
-      descripcion: "(CENARES) BOTA DESCARTABLE",
-      presentacion: "PAR",
-      tipo_producto: "INSUMOS MEDICOS A $",
-      concentra: "",
-      cod_sismed: "31590",
-      nom_sismed: "",
-      fraccion: "1",
-      variable: "N",
-      activo: "1",
-      modulo: "FARMACIA",
-    },
-  ]
+  // Fetch items from the backend
+  useEffect(() => {
+    const fetchItems = async () => {
+      setLoadingItems(true)
+      try {
+        const skip = (currentPage - 1) * itemsPerPage
+        const response = await fetch(`/api/tablas/items?skip=${skip}&take=${itemsPerPage}&search=${searchTerm}`)
+        const data = await response.json()
+        
+        // Transform the data to match our Item interface
+        const transformedItems: Item[] = data.map((item: any) => ({
+          id: Number(item.IDRECORD),
+          codigo: item.ITEM || '',
+          descripcion: item.DESCRIPCION || '',
+          presentacion: item.PRESENTACION || '',
+          tipo_producto: item.TIPO_PRODUCTO || '',
+          concentracion: item.CONCENTRACION || '',
+          cod_sismed: item.INTERFASE2 || '', // COD_SISMED
+          nom_sismed: item.NOM_SISMED || '',
+          fraccion: item.FRACCION ? item.FRACCION.toString() : '',
+          variable: item.VARIABLE || '',
+          activo: item.ACTIVO ? item.ACTIVO.toString() : '',
+          modulo: item.MODULO || '',
+        }))
+        
+        setItems(transformedItems)
+        
+        // Fetch total count for pagination
+        const countResponse = await fetch(`/api/tablas/items/count?search=${searchTerm}`)
+        const countData = await countResponse.json()
+        setTotalItems(countData.count)
+      } catch (error) {
+        console.error("Error fetching items:", error)
+      } finally {
+        setLoadingItems(false)
+      }
+    }
+    
+    fetchItems()
+  }, [searchTerm, currentPage, itemsPerPage])
 
-  // Datos de ejemplo para precios
-  const precios = [
-    {
-      id: 1,
-      item: "172091",
-      fecha: "11/12/2024",
-      hora: "16:09:29",
-      promedio: 6.702,
-      costo: 6.9,
-      utilidad: 24.8,
-      preciopub: 8.611,
-      descuen: 0,
-      precio: 8.611,
-      sysinsert: "ECHATE 11/12/2024 16",
-      sysupdate: "",
-      ingresoid: "24002806",
-      documento: "107912",
-    },
-    {
-      id: 2,
-      item: "172091",
-      fecha: "11/12/2024",
-      hora: "16:12:15",
-      promedio: 6.721,
-      costo: 6.9,
-      utilidad: 24.8,
-      preciopub: 8.611,
-      descuen: 0,
-      precio: 8.611,
-      sysinsert: "ECHATE 11/12/2024 16",
-      sysupdate: "",
-      ingresoid: "24002807",
-      documento: "112562",
-    },
-    {
-      id: 3,
-      item: "172091",
-      fecha: "27/11/2024",
-      hora: "09:15:41",
-      promedio: 6.649,
-      costo: 6.9,
-      utilidad: 24.8,
-      preciopub: 8.611,
-      descuen: 0,
-      precio: 8.611,
-      sysinsert: "ECHATE 27/11/2024 09",
-      sysupdate: "",
-      ingresoid: "24002737",
-      documento: "098013",
-    },
-  ]
+  // Fetch precios for the selected item
+  useEffect(() => {
+    if (selectedItem && activeTab === "precios") {
+      const fetchPrecios = async () => {
+        setLoadingPrecios(true)
+        try {
+          const skip = (currentPage - 1) * itemsPerPage
+          const response = await fetch(`/api/tablas/precios?item=${selectedItem}&skip=${skip}&take=${itemsPerPage}`)
+          const data = await response.json()
+          setPrecios(data)
+          
+          // Fetch total count for pagination if needed
+          const countResponse = await fetch(`/api/tablas/precios/count?item=${selectedItem}`)
+          const countData = await countResponse.json()
+          setTotalPrecios(countData.count)
+        } catch (error) {
+          console.error("Error fetching precios:", error)
+        } finally {
+          setLoadingPrecios(false)
+        }
+      }
+      
+      fetchPrecios()
+    }
+  }, [selectedItem, activeTab, currentPage, itemsPerPage])
 
-  // Filtrar items basado en el término de búsqueda
+  // Filtrar items basado en el término de búsqueda (client-side filtering for already fetched items)
   const filteredItems = items.filter(
     (item) =>
       item.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -133,18 +144,22 @@ export default function PreciosPage() {
     setSelectAll(!selectAll)
   }
 
-  // Manejar selección individual
+  // Manejar selección individual de item
   const handleSelectItem = (id: number) => {
     if (selectedItems.includes(id)) {
       setSelectedItems(selectedItems.filter((itemId) => itemId !== id))
-      setSelectAll(false)
     } else {
       setSelectedItems([...selectedItems, id])
-      if (selectedItems.length + 1 === filteredItems.length) {
-        setSelectAll(true)
-      }
     }
   }
+
+  // Manejar cambio de página
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  // Encontrar el item seleccionado para mostrar sus detalles
+  const selectedItemDetails = items.find((item) => item.codigo === selectedItem)
 
   return (
     <div className="space-y-4">
@@ -208,7 +223,7 @@ export default function PreciosPage() {
                       <TableHead>NOMBRE</TableHead>
                       <TableHead>PRESENTACION</TableHead>
                       <TableHead>TIPO_PRODUCTO</TableHead>
-                      <TableHead>CONCENTRA</TableHead>
+                      <TableHead>CONCENTRACION</TableHead>
                       <TableHead>COD_SISMED</TableHead>
                       <TableHead>NOM_SISMED</TableHead>
                       <TableHead>FRACCION</TableHead>
@@ -218,9 +233,15 @@ export default function PreciosPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.length > 0 ? (
+                    {loadingItems ? (
+                      <TableRow>
+                        <TableCell colSpan={12} className="text-center py-8">
+                          Cargando items...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredItems.length > 0 ? (
                       filteredItems.map((item) => (
-                        <TableRow key={item.id} className={selectedItem === item.id ? "bg-primary/10" : ""}>
+                        <TableRow key={item.id} className={selectedItem === item.codigo ? "bg-primary/10" : ""}>
                           <TableCell>
                             <Checkbox
                               checked={selectedItems.includes(item.id)}
@@ -230,7 +251,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -238,7 +259,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -246,7 +267,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -254,7 +275,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -262,15 +283,15 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
-                            {item.concentra}
+                            {item.concentracion}
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -278,7 +299,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -286,7 +307,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -294,7 +315,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -302,7 +323,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -310,7 +331,7 @@ export default function PreciosPage() {
                           </TableCell>
                           <TableCell
                             onClick={() => {
-                              setSelectedItem(item.id)
+                              setSelectedItem(item.codigo)
                               setActiveTab("precios")
                             }}
                           >
@@ -320,7 +341,7 @@ export default function PreciosPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={12} className="text-center py-4">
+                        <TableCell colSpan={12} className="text-center py-8">
                           No se encontraron resultados.
                         </TableCell>
                       </TableRow>
@@ -328,6 +349,31 @@ export default function PreciosPage() {
                   </TableBody>
                 </Table>
               </div>
+              {totalItems > itemsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <div className="flex items-center justify-center px-3 py-1 bg-muted rounded-md text-sm">
+                      Página {currentPage} de {Math.ceil(totalItems / itemsPerPage)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= Math.ceil(totalItems / itemsPerPage)}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -336,8 +382,15 @@ export default function PreciosPage() {
           <Card>
             <CardHeader>
               <CardTitle>Precios del Item</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                Item: {selectedItem ? items.find((i) => i.id === selectedItem)?.descripcion : ""}
+              <div className="text-sm text-muted-foreground mt-2">
+                {selectedItemDetails && (
+                  <>
+                    <p><strong>Código:</strong> {selectedItemDetails.codigo}</p>
+                    <p><strong>Descripción:</strong> {selectedItemDetails.descripcion}</p>
+                    <p><strong>Presentación:</strong> {selectedItemDetails.presentacion}</p>
+                    <p><strong>Concentración:</strong> {selectedItemDetails.concentracion || '-'}</p>
+                  </>
+                )}
               </div>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-4">
                 <div className="flex flex-wrap gap-2">
@@ -361,14 +414,13 @@ export default function PreciosPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead>ITEM</TableHead>
                       <TableHead>FECHA</TableHead>
                       <TableHead>HORA</TableHead>
                       <TableHead>PROMEDIO</TableHead>
                       <TableHead>COSTO</TableHead>
                       <TableHead>UTILIDAD</TableHead>
                       <TableHead>PRECIOPUB</TableHead>
-                      <TableHead>DESCUEN</TableHead>
+                      <TableHead>DESCUENTO</TableHead>
                       <TableHead>PRECIO</TableHead>
                       <TableHead>SYSINSERT</TableHead>
                       <TableHead>SYSUPDATE</TableHead>
@@ -378,29 +430,42 @@ export default function PreciosPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {precios.map((precio) => (
-                      <TableRow key={precio.id}>
-                        <TableCell>{precio.item}</TableCell>
-                        <TableCell>{precio.fecha}</TableCell>
-                        <TableCell>{precio.hora}</TableCell>
-                        <TableCell>{precio.promedio.toFixed(3)}</TableCell>
-                        <TableCell>{precio.costo.toFixed(1)}</TableCell>
-                        <TableCell>{precio.utilidad.toFixed(1)}</TableCell>
-                        <TableCell>{precio.preciopub.toFixed(3)}</TableCell>
-                        <TableCell>{precio.descuen}</TableCell>
-                        <TableCell>{precio.precio.toFixed(3)}</TableCell>
-                        <TableCell>{precio.sysinsert}</TableCell>
-                        <TableCell>{precio.sysupdate}</TableCell>
-                        <TableCell>{precio.ingresoid}</TableCell>
-                        <TableCell>{precio.documento}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <FileEdit className="h-4 w-4 text-blue-500" />
-                            <span className="sr-only">Editar precio</span>
-                          </Button>
+                    {loadingPrecios ? (
+                      <TableRow>
+                        <TableCell colSpan={13} className="text-center py-8">
+                          Cargando precios...
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : precios.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13} className="text-center py-8">
+                          No se encontraron precios para este item
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      precios.map((precio) => (
+                        <TableRow key={precio.IDRECORD}>
+                          <TableCell>{precio.FECHA}</TableCell>
+                          <TableCell>{precio.HORA}</TableCell>
+                          <TableCell>{Number(precio.PROMEDIO).toFixed(3)}</TableCell>
+                          <TableCell>{Number(precio.COSTO).toFixed(1)}</TableCell>
+                          <TableCell>{Number(precio.UTILIDAD).toFixed(1)}</TableCell>
+                          <TableCell>{Number(precio.PRECIOPUB).toFixed(3)}</TableCell>
+                          <TableCell>{Number(precio.DESCUENTO).toFixed(2)}</TableCell>
+                          <TableCell>{Number(precio.PRECIO).toFixed(3)}</TableCell>
+                          <TableCell>{precio.SYSINSERT}</TableCell>
+                          <TableCell>{precio.SYSUPDATE || '-'}</TableCell>
+                          <TableCell>{precio.INGRESOID}</TableCell>
+                          <TableCell>{precio.DOCUMENTO}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <FileEdit className="h-4 w-4 text-blue-500" />
+                              <span className="sr-only">Editar precio</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -409,6 +474,31 @@ export default function PreciosPage() {
                   Volver a Items
                 </Button>
               </div>
+              {totalPrecios > itemsPerPage && (
+                <div className="flex justify-center mt-4">
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <div className="flex items-center justify-center px-3 py-1 bg-muted rounded-md text-sm">
+                      Página {currentPage} de {Math.ceil(totalPrecios / itemsPerPage)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= Math.ceil(totalPrecios / itemsPerPage)}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -416,4 +506,3 @@ export default function PreciosPage() {
     </div>
   )
 }
-

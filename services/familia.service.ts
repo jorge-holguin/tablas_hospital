@@ -41,4 +41,13 @@ export class FamiliaService {
       where: { FAMILIA: id },
     })
   }
+
+  async count(params: {
+    where?: Prisma.FAMILIAWhereInput
+  }) {
+    const { where } = params
+    return prisma.fAMILIA.count({
+      where,
+    })
+  }
 }

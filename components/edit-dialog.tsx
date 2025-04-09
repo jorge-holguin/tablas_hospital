@@ -6,14 +6,21 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface FieldConfig {
   name: string
   label: string
-  type: 'text' | 'number' | 'select' | 'date' | 'textarea'
+  type: 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox'
   required?: boolean
   readOnly?: boolean
+  maxLength?: number
   options?: { value: string; label: string }[]
+  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: any, setFormData: React.Dispatch<React.SetStateAction<any>>) => void
+  transform?: {
+    input: (value: any) => any
+    output: (value: any) => any
+  }
 }
 
 interface EditDialogProps {
@@ -22,9 +29,10 @@ interface EditDialogProps {
   onSave: (data: any) => void
   title?: string
   defaultValues?: any
-  fields?: FieldConfig[]
+  fields: FieldConfig[]
+  selectedItem?: string | null
+  data?: any[]
   type?: string
-  data?: any
 }
 
 export function EditDialog({ 
@@ -34,96 +42,56 @@ export function EditDialog({
   title = "Editar", 
   defaultValues = {}, 
   fields = [],
-  type,
-  data 
+  selectedItem,
+  data,
+  type 
 }: EditDialogProps) {
   const [formData, setFormData] = useState<any>({})
 
   useEffect(() => {
-    // Only initialize form data when the dialog opens
-    if (open) {
-      let initialData = {}
-      
-      if (fields.length > 0 && defaultValues) {
-        initialData = { ...defaultValues }
-      } else if (data) {
-        initialData = { ...data }
-      } else if (type) {
-        // Valores por defecto según el tipo
-        switch (type) {
-          case "genericos":
-            initialData = { GENERICO: "", NOMBRE: "", ACTIVO: "1" }
-            break
-          case "laboratorios":
-            initialData = { codigo: "", nombre: "", ruc: "", direccion: "", telefono: "", activo: "1" }
-            break
-          case "tipoAtencion":
-            initialData = { codigo: "", nombre: "", activo: "1" }
-            break
-          case "items":
-            initialData = {
-              codigo: "",
-              nombre: "",
-              codigoSismed: "",
-              tipoPrograma: "",
-              aplicaDescuento: "S",
-              formaFarmaceutica: "",
-              clase: "",
-              presentacion: "",
-              concentracion: "",
-              familia: "",
-            }
-            break
-          case "familias":
-            initialData = { codigo: "", nombre: "", activo: "1" }
-            break
-          case "presentaciones":
-            initialData = { PRESENTACION: "", NOMBRE: "", ACTIVO: "1" }
-            break
-          case "precios":
-            initialData = {
-              item: data?.item || "",
-              nombre: data?.nombre || "",
-              fecha: new Date().toLocaleDateString("es-ES"),
-              hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-              costo: "0",
-              utilidad: "0",
-              precioPub: "0",
-              descuento: "0",
-              precioVenta: "0",
-            }
-            break
-          case "clases":
-            initialData = { codigo: "", nombre: "", activo: "1" }
-            break
-          case "proveedores":
-            initialData = { codigo: "", nombre: "", ruc: "", direccion: "", telefono: "", activo: "1" }
-            break
-          case "almacenes":
-            initialData = { codigo: "", nombre: "", activo: "1" }
-            break
-          default:
-            initialData = {}
-        }
-      }
-      
-      // Use a functional update to avoid dependency on formData
-      setFormData(initialData)
+    if (selectedItem && data) {
+      const selectedData = data.find((item: any) => item[Object.keys(item)[0]] === selectedItem)
+      setFormData(selectedData || defaultValues)
+    } else {
+      setFormData(defaultValues)
     }
-  }, [open]) // Only depend on the open state
+  }, [selectedItem, data, defaultValues])
 
-  const handleChange = (field: string, value: string | number) => {
-    setFormData({ ...formData, [field]: value })
-  }
-
-  const handleSave = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
     onSave(formData)
   }
 
   const renderField = (field: FieldConfig) => {
-    const value = formData[field.name] !== undefined ? formData[field.name] : ''
+    let value = formData[field.name] !== undefined ? formData[field.name] : ''
+    
+    // Apply input transform if available (for checkbox)
+    if (field.type === 'checkbox' && field.transform?.input) {
+      value = field.transform.input(value)
+    }
     
     switch (field.type) {
+      case 'checkbox':
+        return (
+          <div className="grid grid-cols-4 items-center gap-4" key={field.name}>
+            <Label htmlFor={field.name} className="text-right">
+              {field.label}
+            </Label>
+            <div className="col-span-3 flex items-center space-x-2">
+              <Checkbox 
+                id={field.name}
+                checked={Boolean(value)}
+                onCheckedChange={(checked) => {
+                  const newValue = checked ? true : false
+                  const outputValue = field.transform?.output ? field.transform.output(newValue) : newValue
+                  setFormData({ ...formData, [field.name]: outputValue })
+                }}
+                disabled={field.readOnly}
+              />
+            </div>
+          </div>
+        )
+      
       case 'select':
         return (
           <div className="grid grid-cols-4 items-center gap-4" key={field.name}>
@@ -133,7 +101,9 @@ export function EditDialog({
             <div className="col-span-3">
               <Select 
                 value={String(value)} 
-                onValueChange={(val) => handleChange(field.name, val)}
+                onValueChange={(val) => field.onChange 
+                  ? field.onChange({target: {value: val}} as React.ChangeEvent<HTMLInputElement>, formData, setFormData) 
+                  : setFormData({ ...formData, [field.name]: val})}
                 disabled={field.readOnly}
               >
                 <SelectTrigger id={field.name}>
@@ -161,7 +131,7 @@ export function EditDialog({
               id={field.name}
               type="number"
               value={value}
-              onChange={(e) => handleChange(field.name, e.target.value)}
+              onChange={(e) => field.onChange ? field.onChange(e, formData, setFormData) : setFormData({ ...formData, [field.name]: e.target.value})}
               className="col-span-3"
               required={field.required}
               readOnly={field.readOnly}
@@ -178,10 +148,11 @@ export function EditDialog({
             <Input
               id={field.name}
               value={value}
-              onChange={(e) => handleChange(field.name, e.target.value)}
+              onChange={(e) => field.onChange ? field.onChange(e, formData, setFormData) : setFormData({ ...formData, [field.name]: e.target.value})}
               className="col-span-3"
               required={field.required}
               readOnly={field.readOnly}
+              maxLength={field.maxLength}
             />
           </div>
         )
@@ -206,7 +177,7 @@ export function EditDialog({
               <Input
                 id="GENERICO"
                 value={formData.GENERICO || ""}
-                onChange={(e) => handleChange("GENERICO", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "GENERICO": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -217,7 +188,7 @@ export function EditDialog({
               <Input
                 id="NOMBRE"
                 value={formData.NOMBRE || ""}
-                onChange={(e) => handleChange("NOMBRE", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "NOMBRE": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -228,7 +199,7 @@ export function EditDialog({
               <Input
                 id="ACTIVO"
                 value={formData.ACTIVO || "1"}
-                onChange={(e) => handleChange("ACTIVO", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "ACTIVO": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -245,7 +216,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -256,7 +227,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -267,7 +238,7 @@ export function EditDialog({
               <Input
                 id="ruc"
                 value={formData.ruc || ""}
-                onChange={(e) => handleChange("ruc", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "ruc": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -278,7 +249,7 @@ export function EditDialog({
               <Input
                 id="direccion"
                 value={formData.direccion || ""}
-                onChange={(e) => handleChange("direccion", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "direccion": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -289,7 +260,7 @@ export function EditDialog({
               <Input
                 id="telefono"
                 value={formData.telefono || ""}
-                onChange={(e) => handleChange("telefono", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "telefono": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -300,7 +271,7 @@ export function EditDialog({
               <Input
                 id="activo"
                 value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "activo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -317,7 +288,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -328,7 +299,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -339,7 +310,7 @@ export function EditDialog({
               <Input
                 id="activo"
                 value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "activo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -356,7 +327,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -367,7 +338,7 @@ export function EditDialog({
               <Input
                 id="codigoSismed"
                 value={formData.codigoSismed || ""}
-                onChange={(e) => handleChange("codigoSismed", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigoSismed": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -378,7 +349,7 @@ export function EditDialog({
               <Input
                 id="tipoPrograma"
                 value={formData.tipoPrograma || ""}
-                onChange={(e) => handleChange("tipoPrograma", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "tipoPrograma": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -389,7 +360,7 @@ export function EditDialog({
               <Input
                 id="aplicaDescuento"
                 value={formData.aplicaDescuento || "S"}
-                onChange={(e) => handleChange("aplicaDescuento", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "aplicaDescuento": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -400,7 +371,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -411,7 +382,7 @@ export function EditDialog({
               <Input
                 id="formaFarmaceutica"
                 value={formData.formaFarmaceutica || ""}
-                onChange={(e) => handleChange("formaFarmaceutica", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "formaFarmaceutica": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -422,7 +393,7 @@ export function EditDialog({
               <Input
                 id="clase"
                 value={formData.clase || ""}
-                onChange={(e) => handleChange("clase", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "clase": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -433,7 +404,7 @@ export function EditDialog({
               <Input
                 id="presentacion"
                 value={formData.presentacion || ""}
-                onChange={(e) => handleChange("presentacion", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "presentacion": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -444,7 +415,7 @@ export function EditDialog({
               <Input
                 id="concentracion"
                 value={formData.concentracion || ""}
-                onChange={(e) => handleChange("concentracion", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "concentracion": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -455,7 +426,7 @@ export function EditDialog({
               <Input
                 id="familia"
                 value={formData.familia || ""}
-                onChange={(e) => handleChange("familia", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "familia": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -472,7 +443,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -483,7 +454,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -494,7 +465,7 @@ export function EditDialog({
               <Input
                 id="activo"
                 value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "activo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -511,7 +482,7 @@ export function EditDialog({
               <Input
                 id="PRESENTACION"
                 value={formData.PRESENTACION || ""}
-                onChange={(e) => handleChange("PRESENTACION", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "PRESENTACION": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -522,7 +493,7 @@ export function EditDialog({
               <Input
                 id="NOMBRE"
                 value={formData.NOMBRE || ""}
-                onChange={(e) => handleChange("NOMBRE", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "NOMBRE": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -533,7 +504,7 @@ export function EditDialog({
               <Input
                 id="ACTIVO"
                 value={formData.ACTIVO || "1"}
-                onChange={(e) => handleChange("ACTIVO", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "ACTIVO": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -567,7 +538,7 @@ export function EditDialog({
                   <Input
                     id="fecha"
                     value={formData.fecha || ""}
-                    onChange={(e) => handleChange("fecha", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "fecha": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -578,7 +549,7 @@ export function EditDialog({
                   <Input
                     id="hora"
                     value={formData.hora || ""}
-                    onChange={(e) => handleChange("hora", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "hora": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -591,7 +562,7 @@ export function EditDialog({
                     type="number"
                     step="0.01"
                     value={formData.costo || "0"}
-                    onChange={(e) => handleChange("costo", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "costo": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -604,7 +575,7 @@ export function EditDialog({
                     type="number"
                     step="0.1"
                     value={formData.utilidad || "0"}
-                    onChange={(e) => handleChange("utilidad", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "utilidad": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -617,7 +588,7 @@ export function EditDialog({
                     type="number"
                     step="0.01"
                     value={formData.precioPub || "0"}
-                    onChange={(e) => handleChange("precioPub", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "precioPub": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -630,7 +601,7 @@ export function EditDialog({
                     type="number"
                     step="0.1"
                     value={formData.descuento || "0"}
-                    onChange={(e) => handleChange("descuento", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "descuento": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -643,7 +614,7 @@ export function EditDialog({
                     type="number"
                     step="0.01"
                     value={formData.precioVenta || "0"}
-                    onChange={(e) => handleChange("precioVenta", e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, "precioVenta": e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -662,7 +633,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -673,7 +644,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -684,7 +655,7 @@ export function EditDialog({
               <Input
                 id="activo"
                 value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "activo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -701,7 +672,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -712,7 +683,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -723,7 +694,7 @@ export function EditDialog({
               <Input
                 id="ruc"
                 value={formData.ruc || ""}
-                onChange={(e) => handleChange("ruc", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "ruc": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -734,7 +705,7 @@ export function EditDialog({
               <Input
                 id="direccion"
                 value={formData.direccion || ""}
-                onChange={(e) => handleChange("direccion", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "direccion": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -745,7 +716,7 @@ export function EditDialog({
               <Input
                 id="telefono"
                 value={formData.telefono || ""}
-                onChange={(e) => handleChange("telefono", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "telefono": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -756,7 +727,7 @@ export function EditDialog({
               <Input
                 id="activo"
                 value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "activo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -773,7 +744,7 @@ export function EditDialog({
               <Input
                 id="codigo"
                 value={formData.codigo || ""}
-                onChange={(e) => handleChange("codigo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "codigo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -784,7 +755,7 @@ export function EditDialog({
               <Input
                 id="nombre"
                 value={formData.nombre || ""}
-                onChange={(e) => handleChange("nombre", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "nombre": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -795,7 +766,7 @@ export function EditDialog({
               <Input
                 id="activo"
                 value={formData.activo || "1"}
-                onChange={(e) => handleChange("activo", e.target.value)}
+                onChange={(e) => setFormData({ ...formData, "activo": e.target.value })}
                 className="col-span-3"
               />
             </div>
@@ -809,21 +780,61 @@ export function EditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          {renderFields()}
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={handleSave}>
-            Guardar
-          </Button>
-        </DialogFooter>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {fields.length > 0 ? fields.map(field => (
+            <div key={field.name} className="grid gap-2">
+              <Label htmlFor={field.name}>{field.label}</Label>
+              {field.type === 'select' ? (
+                <Select
+                  value={formData[field.name]?.toString() || ''}
+                  onValueChange={(value) => setFormData({ ...formData, [field.name]: value })}
+                  disabled={field.readOnly}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {field.options?.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : field.type === 'checkbox' ? (
+                <Checkbox
+                  id={field.name}
+                  checked={formData[field.name] || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, [field.name]: checked })}
+                  disabled={field.readOnly}
+                />
+              ) : (
+                <Input
+                  id={field.name}
+                  type={field.type}
+                  value={formData[field.name] || ''}
+                  onChange={(e) => {
+                    if (field.onChange) {
+                      field.onChange(e, formData, setFormData)
+                    } else {
+                      setFormData({ ...formData, [field.name]: e.target.value })
+                    }
+                  }}
+                  required={field.required}
+                  readOnly={field.readOnly}
+                  maxLength={field.maxLength}
+                />
+              )}
+            </div>
+          )) : renderFields()}
+          <DialogFooter>
+            <Button type="submit">Guardar</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

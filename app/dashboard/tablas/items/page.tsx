@@ -11,19 +11,29 @@ import { Pagination } from "@/components/pagination"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { EditDialog } from "@/components/edit-dialog"
 import { toast } from "sonner"
+import { 
+  RefreshCw, 
+  FilePlus, 
+  Pencil, 
+  Trash2, 
+  Printer, 
+  FileSpreadsheet 
+} from "lucide-react"
 
 // Interfaces para los tipos de datos
 interface Item {
   ITEM: string
   NOMBRE?: string
-  ABREVIATURA?: string
   PRESENTACION?: string
-  FAMILIA?: string
-  CLASE?: string
-  GENERICO?: string
-  LABORATORIO?: string
-  STOCK?: number
+  TIPO_PRODUCTO?: string
+  TIPO_PRODUCTO_DESC?: string
+  CONCENTRACION?: string
+  INTERFASE2?: string // COD_SISMED
+  NOM_SISMED?: string
+  FRACCION?: number
+  VARIABLE?: number
   ACTIVO?: number | string
+  MODULO?: string
   [key: string]: any
 }
 
@@ -31,11 +41,17 @@ interface Precio {
   IDRECORD: string
   ITEM: string
   FECHA: string
-  PRECIOA: number
-  PRECIOB: number
-  PRECIOC: number
+  HORA?: string
+  PROMEDIO?: number
   COSTO?: number
   UTILIDAD?: number
+  PRECIOPUB?: number
+  DESCUENTO?: number
+  PRECIO?: number
+  SYSINSERT?: string
+  SYSUPDATE?: string
+  INGRESOID?: string
+  DOCUMENTO?: string
   [key: string]: any
 }
 
@@ -53,6 +69,8 @@ export default function ItemsPage() {
   const [preciosCurrentPage, setPreciosCurrentPage] = useState(1)
   const [editPrecioDialogOpen, setEditPrecioDialogOpen] = useState(false)
   const [selectedPrecio, setSelectedPrecio] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<number | null>(null)
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false)
   
   // Estados para almacenar los datos del backend
   const [items, setItems] = useState<Item[]>([])
@@ -63,20 +81,43 @@ export default function ItemsPage() {
   const [loadingPrecios, setLoadingPrecios] = useState(false)
   const [itemToEdit, setItemToEdit] = useState<Item | null>(null)
   const [precioToEdit, setPrecioToEdit] = useState<Precio | null>(null)
+  const [documentoInfo, setDocumentoInfo] = useState<{[key: string]: string}>({})
 
   // Función para cargar los items desde el backend
   const fetchItems = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/tablas/items?take=${pageSize}&skip=${(currentPage - 1) * pageSize}${searchQuery ? `&search=${searchQuery}` : ''}`)
+      let queryParams = `take=${pageSize}&skip=${(currentPage - 1) * pageSize}`;
+      
+      if (searchQuery) {
+        queryParams += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+      
+      if (activeFilter !== null) {
+        queryParams += `&activeFilter=${activeFilter}`;
+      }
+      
+      // Ordenar por ACTIVO (descendente) y NOMBRE (ascendente)
+      queryParams += `&orderBy=ACTIVO:desc,NOMBRE:asc`;
+      
+      const response = await fetch(`/api/tablas/items?${queryParams}`)
       if (!response.ok) {
         throw new Error('Error al cargar los items')
       }
       const data = await response.json()
       setItems(data)
       
-      // Obtener el total de items para la paginación
-      const countResponse = await fetch('/api/tablas/items/count')
+      // Actualizar el contador con los mismos filtros
+      let countQueryParams = '';
+      if (searchQuery) {
+        countQueryParams += `${countQueryParams ? '&' : '?'}search=${encodeURIComponent(searchQuery)}`;
+      }
+      
+      if (activeFilter !== null) {
+        countQueryParams += `${countQueryParams ? '&' : '?'}activeFilter=${activeFilter}`;
+      }
+      
+      const countResponse = await fetch(`/api/tablas/items/count${countQueryParams}`)
       if (countResponse.ok) {
         const { count } = await countResponse.json()
         setTotalItems(count)
@@ -102,7 +143,33 @@ export default function ItemsPage() {
       const data = await response.json()
       setPrecios(data)
       
-      // Obtener el total de precios para la paginación
+      // Obtener información de documentos para cada precio con IngresoID
+      const ingresoIds = data
+        .filter((precio: Precio) => precio.INGRESOID)
+        .map((precio: Precio) => precio.INGRESOID)
+      
+      if (ingresoIds.length > 0) {
+        const documentoInfoTemp: {[key: string]: string} = {}
+        
+        await Promise.all(
+          ingresoIds.map(async (ingresoId: string) => {
+            if (ingresoId) {
+              try {
+                const ingresoResponse = await fetch(`/api/almacenes/ingresos/${ingresoId}`)
+                if (ingresoResponse.ok) {
+                  const ingresoData = await ingresoResponse.json()
+                  documentoInfoTemp[ingresoId] = ingresoData.DOCUMENTO || '-'
+                }
+              } catch (error) {
+                console.error(`Error fetching ingreso ${ingresoId}:`, error)
+              }
+            }
+          })
+        )
+        
+        setDocumentoInfo(documentoInfoTemp)
+      }
+      
       const countResponse = await fetch(`/api/tablas/precios/count?item=${selectedItem}`)
       if (countResponse.ok) {
         const { count } = await countResponse.json()
@@ -119,7 +186,7 @@ export default function ItemsPage() {
   // Cargar items al montar el componente o cambiar la paginación/búsqueda
   useEffect(() => {
     fetchItems()
-  }, [currentPage, pageSize, searchQuery])
+  }, [currentPage, pageSize, searchQuery, activeFilter])
 
   // Cargar precios cuando se selecciona un item
   useEffect(() => {
@@ -190,25 +257,48 @@ export default function ItemsPage() {
     }
   }
 
-  // Función para guardar cambios en un precio
-  const handleSavePrecio = async (formData: any) => {
+  // Función para guardar un precio (crear o actualizar)
+  const handleSavePrecio = async (data: any) => {
     try {
-      const method = precioToEdit ? 'PUT' : 'POST'
-      const url = precioToEdit ? `/api/tablas/precios/${precioToEdit.IDRECORD}` : '/api/tablas/precios'
+      // Establecer la fecha y hora actuales
+      const now = new Date();
+      data.FECHA = now.toISOString().split('T')[0];
+      data.HORA = now.toTimeString().slice(0, 5);
       
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
+      // Calcular PRECIOPUB y PRECIO basado en las fórmulas correctas
+      const costo = parseFloat(data.COSTO) || 0;
+      const utilidad = parseFloat(data.UTILIDAD) || 0;
+      const descuento = parseFloat(data.DESCUENTO) || 0;
       
-      if (!response.ok) {
-        throw new Error(`Error al ${precioToEdit ? 'actualizar' : 'crear'} el precio`)
+      // Precio Publico = Costo * (1 + porcentaje de utilidad)
+      data.PRECIOPUB = costo * (1 + (utilidad / 100));
+      
+      // Precio Venta = Precio Publico * (1 - porcentaje de descuento)
+      data.PRECIO = data.PRECIOPUB * (1 - (descuento / 100));
+      
+      if (precioToEdit) {
+        // Actualizar precio existente
+        await fetch(`/api/tablas/precios/${precioToEdit.IDRECORD}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        toast.success('Precio actualizado correctamente')
+      } else {
+        // Crear nuevo precio
+        await fetch('/api/tablas/precios', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        toast.success('Precio creado correctamente')
       }
       
-      toast.success(`Precio ${precioToEdit ? 'actualizado' : 'creado'} correctamente`)
+      // Actualizar la lista de precios
       fetchPrecios()
       setEditPrecioDialogOpen(false)
       setPrecioToEdit(null)
@@ -230,6 +320,187 @@ export default function ItemsPage() {
     setEditPrecioDialogOpen(true)
   }
 
+  const handleFilterAll = () => {
+    setActiveFilter(null);
+    setCurrentPage(1);
+  }
+
+  const handleFilterActive = () => {
+    setActiveFilter(1);
+    setCurrentPage(1);
+  }
+
+  const handleFilterInactive = () => {
+    setActiveFilter(0);
+    setCurrentPage(1);
+  }
+
+  // Función para actualizar la lista de items
+  const handleRefresh = () => {
+    fetchItems();
+    toast.success("Lista de items actualizada");
+  };
+
+  // Función para crear un nuevo item
+  const handleNewItem = () => {
+    setItemToEdit(null);
+    setEditDialogOpen(true);
+  };
+
+  // Función para editar un item seleccionado
+  const handleEditItemSelected = () => {
+    if (!selectedItem) {
+      toast.error("Debe seleccionar un item para editar");
+      return;
+    }
+    
+    const item = items.find((item) => item.ITEM === selectedItem);
+    if (item) {
+      setItemToEdit(item);
+      setEditDialogOpen(true);
+    }
+  };
+
+  // Función para confirmar la eliminación de un item
+  const handleConfirmDelete = () => {
+    if (!selectedItem) {
+      toast.error("Debe seleccionar un item para eliminar");
+      return;
+    }
+    
+    setConfirmDialogOpen(true);
+  };
+
+  // Función para exportar a Excel
+  const handleExportToExcel = async () => {
+    try {
+      // Construir los parámetros de consulta con los mismos filtros que la vista actual
+      let queryParams = '';
+      
+      if (searchQuery) {
+        queryParams += `${queryParams ? '&' : '?'}search=${encodeURIComponent(searchQuery)}`;
+      }
+      
+      if (activeFilter !== null) {
+        queryParams += `${queryParams ? '&' : '?'}activeFilter=${activeFilter}`;
+      }
+      
+      // Ordenar por ACTIVO (descendente) y NOMBRE (ascendente)
+      queryParams += `${queryParams ? '&' : '?'}orderBy=ACTIVO:desc,NOMBRE:asc`;
+      
+      // Obtener todos los items para exportar (sin paginación)
+      const response = await fetch(`/api/tablas/items/export${queryParams}`);
+      
+      if (!response.ok) {
+        throw new Error('Error al exportar los items');
+      }
+      
+      // Descargar el archivo
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'items.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('Archivo Excel generado correctamente');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Error al exportar a Excel');
+    }
+  };
+
+  // Función para imprimir la lista de items
+  const handlePrint = () => {
+    // Crear una ventana de impresión
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('El navegador bloqueó la ventana emergente. Por favor, permita ventanas emergentes para esta página.');
+      return;
+    }
+    
+    // Crear el contenido HTML para imprimir
+    const itemsToShow = items.map(item => ({
+      ITEM: item.ITEM,
+      NOMBRE: item.NOMBRE || '',
+      PRESENTACION: item.PRESENTACION || '',
+      TIPO_PRODUCTO_DESC: item.TIPO_PRODUCTO_DESC || item.TIPO_PRODUCTO || '',
+      CONCENTRACION: item.CONCENTRACION || '',
+      ACTIVO: Number(item.ACTIVO) === 1 ? 'Sí' : 'No'
+    }));
+    
+    // Generar el HTML para la impresión
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Listado de Items</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .date { text-align: right; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <h1>Listado de Items</h1>
+          <div class="date">Fecha: ${new Date().toLocaleDateString()}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Presentación</th>
+                <th>Tipo Producto</th>
+                <th>Concentración</th>
+                <th>Activo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsToShow.map(item => `
+                <tr>
+                  <td>${item.ITEM}</td>
+                  <td>${item.NOMBRE}</td>
+                  <td>${item.PRESENTACION}</td>
+                  <td>${item.TIPO_PRODUCTO_DESC}</td>
+                  <td>${item.CONCENTRACION}</td>
+                  <td>${item.ACTIVO}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    // Escribir el HTML en la ventana de impresión
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    // Esperar a que se carguen los estilos y luego imprimir
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  // Función para manejar el filtro
+  const handleFilter = () => {
+    setFilterDialogOpen(true);
+  };
+
+  // Función para aplicar el filtro
+  const handleApplyFilter = (filter: number | null) => {
+    setActiveFilter(filter);
+    setCurrentPage(1);
+    setFilterDialogOpen(false);
+  };
+
   return (
     <div className="container mx-auto py-6">
       <Tabs defaultValue="items" value={activeTab} onValueChange={setActiveTab}>
@@ -240,28 +511,7 @@ export default function ItemsPage() {
               Precios
             </TabsTrigger>
           </TabsList>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setItemToEdit(null)
-                setEditDialogOpen(true)
-              }}
-            >
-              Nuevo Item
-            </Button>
-            {activeTab === "precios" && selectedItem && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPrecioToEdit(null)
-                  setEditPrecioDialogOpen(true)
-                }}
-              >
-                Nuevo Precio
-              </Button>
-            )}
-          </div>
+          {/* Botones superiores desactivados - funcionalidad movida a botones inferiores */}
         </div>
 
         <TabsContent value="items">
@@ -271,7 +521,17 @@ export default function ItemsPage() {
               <TableToolbar
                 searchPlaceholder="Buscar por código o descripción..."
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
+                onSearchChange={(query) => setSearchQuery(query)}
+                onRefresh={handleRefresh}
+                onNew={handleNewItem}
+                onEdit={handleEditItemSelected}
+                onDelete={handleConfirmDelete}
+                onPrint={handlePrint}
+                onExport={handleExportToExcel}
+                disableEdit={!selectedItem}
+                disableDelete={!selectedItem}
+                showFilterButton={true}
+                onFilter={handleFilter}
               />
             </CardHeader>
             <CardContent>
@@ -285,28 +545,30 @@ export default function ItemsPage() {
                           onCheckedChange={(checked) => setSelectAll(!!checked)}
                         />
                       </TableHead>
-                      <TableHead className="w-28">Código</TableHead>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Presentación</TableHead>
-                      <TableHead>Familia</TableHead>
-                      <TableHead>Clase</TableHead>
-                      <TableHead>Genérico</TableHead>
-                      <TableHead>Laboratorio</TableHead>
-                      <TableHead className="w-20">Stock</TableHead>
-                      <TableHead className="w-20">Estado</TableHead>
+                      <TableHead className="w-28">Item</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Presentacion</TableHead>
+                      <TableHead>Tipo Producto</TableHead>
+                      <TableHead>Concentracion</TableHead>
+                      <TableHead>COD_SISMED</TableHead>
+                      <TableHead>NOM_SISMED</TableHead>
+                      <TableHead>Fraccion</TableHead>
+                      <TableHead>Variable</TableHead>
+                      <TableHead>Activo</TableHead>
+                      <TableHead>Modulo</TableHead>
                       <TableHead className="w-28">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8">
+                        <TableCell colSpan={12} className="text-center py-8">
                           Cargando items...
                         </TableCell>
                       </TableRow>
                     ) : items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8">
+                        <TableCell colSpan={12} className="text-center py-8">
                           No se encontraron items
                         </TableCell>
                       </TableRow>
@@ -315,6 +577,10 @@ export default function ItemsPage() {
                         <TableRow
                           key={item.ITEM}
                           className={selectedItem === item.ITEM ? "bg-muted/50" : undefined}
+                          onClick={() => {
+                            setSelectedItem(item.ITEM)
+                          }}
+                          style={{ cursor: 'pointer' }}
                         >
                           <TableCell>
                             <Checkbox
@@ -326,47 +592,35 @@ export default function ItemsPage() {
                                   setSelectedItems(selectedItems.filter((id) => id !== item.ITEM))
                                 }
                               }}
+                              onClick={(e) => e.stopPropagation()}
                             />
                           </TableCell>
                           <TableCell className="font-medium">{item.ITEM}</TableCell>
                           <TableCell>{item.NOMBRE || '-'}</TableCell>
                           <TableCell>{item.PRESENTACION || '-'}</TableCell>
-                          <TableCell>{item.FAMILIA || '-'}</TableCell>
-                          <TableCell>{item.CLASE || '-'}</TableCell>
-                          <TableCell>{item.GENERICO || '-'}</TableCell>
-                          <TableCell>{item.LABORATORIO || '-'}</TableCell>
-                          <TableCell>{item.STOCK || 0}</TableCell>
+                          <TableCell>{item.TIPO_PRODUCTO_DESC || item.TIPO_PRODUCTO || '-'}</TableCell>
+                          <TableCell>{item.CONCENTRACION || '-'}</TableCell>
+                          <TableCell>{item.INTERFASE2 || '-'}</TableCell>
+                          <TableCell>{item.NOM_SISMED || '-'}</TableCell>
+                          <TableCell>{item.FRACCION || 0}</TableCell>
+                          <TableCell>{item.VARIABLE || 0}</TableCell>
                           <TableCell>
                             {Number(item.ACTIVO) === 1 ? "Activo" : "Inactivo"}
                           </TableCell>
+                          <TableCell>{item.MODULO || '-'}</TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => {
-                                  setSelectedItem(item.ITEM)
-                                  setActiveTab("precios")
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItem(item.ITEM);
+                                  setActiveTab("precios");
                                 }}
+                                title="Ver precios"
                               >
-                                $
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditItem(item)}
-                              >
-                                ✏️
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedItem(item.ITEM)
-                                  setConfirmDialogOpen(true)
-                                }}
-                              >
-                                🗑️
+                                💰
                               </Button>
                             </div>
                           </TableCell>
@@ -393,33 +647,62 @@ export default function ItemsPage() {
               <CardTitle>
                 Precios del Item: {selectedItem} - {items.find((item) => item.ITEM === selectedItem)?.NOMBRE}
               </CardTitle>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setPrecioToEdit(null);
+                    setEditPrecioDialogOpen(true);
+                  }}
+                >
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  Nuevo Precio
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    fetchPrecios();
+                    toast.success("Lista de precios actualizada");
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Actualizar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-28">ID</TableHead>
-                      <TableHead className="w-28">Código Item</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Precio A</TableHead>
-                      <TableHead>Precio B</TableHead>
-                      <TableHead>Precio C</TableHead>
-                      <TableHead>Costo</TableHead>
-                      <TableHead>Utilidad</TableHead>
-                      <TableHead className="w-28">Acciones</TableHead>
+                      <TableHead>ITEM</TableHead>
+                      <TableHead>FECHA</TableHead>
+                      <TableHead>HORA</TableHead>
+                      <TableHead>PROMEDIO</TableHead>
+                      <TableHead>COSTO</TableHead>
+                      <TableHead>UTILIDAD</TableHead>
+                      <TableHead>PRECIOPUB</TableHead>
+                      <TableHead>DESCUENTO</TableHead>
+                      <TableHead>PRECIO</TableHead>
+                      <TableHead>SYSINSERT</TableHead>
+                      <TableHead>SYSUPDATE</TableHead>
+                      <TableHead>INGRESOID</TableHead>
+                      <TableHead>DOCUMENTO</TableHead>
+                      <TableHead className="w-28">ACCIONES</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingPrecios ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8">
+                        <TableCell colSpan={14} className="text-center py-8">
                           Cargando precios...
                         </TableCell>
                       </TableRow>
                     ) : precios.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8">
+                        <TableCell colSpan={14} className="text-center py-8">
                           No se encontraron precios para este item
                         </TableCell>
                       </TableRow>
@@ -429,14 +712,19 @@ export default function ItemsPage() {
                           key={precio.IDRECORD}
                           className={selectedPrecio === precio.IDRECORD ? "bg-muted/50" : undefined}
                         >
-                          <TableCell className="font-medium">{precio.IDRECORD}</TableCell>
                           <TableCell>{precio.ITEM}</TableCell>
                           <TableCell>{new Date(precio.FECHA).toLocaleDateString()}</TableCell>
-                          <TableCell>{precio.PRECIOA.toFixed(2)}</TableCell>
-                          <TableCell>{precio.PRECIOB.toFixed(2)}</TableCell>
-                          <TableCell>{precio.PRECIOC.toFixed(2)}</TableCell>
+                          <TableCell>{precio.HORA || '-'}</TableCell>
+                          <TableCell>{precio.PROMEDIO ? precio.PROMEDIO.toFixed(2) : '0.00'}</TableCell>
                           <TableCell>{precio.COSTO ? precio.COSTO.toFixed(2) : '0.00'}</TableCell>
                           <TableCell>{precio.UTILIDAD ? precio.UTILIDAD.toFixed(2) : '0.00'}</TableCell>
+                          <TableCell>{precio.PRECIOPUB ? precio.PRECIOPUB.toFixed(2) : '0.00'}</TableCell>
+                          <TableCell>{precio.DESCUENTO ? precio.DESCUENTO.toFixed(2) : '0.00'}</TableCell>
+                          <TableCell>{precio.PRECIO ? precio.PRECIO.toFixed(2) : '0.00'}</TableCell>
+                          <TableCell>{precio.SYSINSERT || '-'}</TableCell>
+                          <TableCell>{precio.SYSUPDATE || '-'}</TableCell>
+                          <TableCell>{precio.INGRESOID || '-'}</TableCell>
+                          <TableCell>{precio.INGRESOID && documentoInfo[precio.INGRESOID] ? documentoInfo[precio.INGRESOID] : '-'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               <Button
@@ -484,25 +772,28 @@ export default function ItemsPage() {
         defaultValues={itemToEdit || {
           ITEM: "",
           NOMBRE: "",
-          ABREVIATURA: "",
           PRESENTACION: "",
-          FAMILIA: "",
-          CLASE: "",
-          GENERICO: "",
-          LABORATORIO: "",
-          STOCK: 0,
+          TIPO_PRODUCTO: "",
+          TIPO_PRODUCTO_DESC: "",
+          CONCENTRACION: "",
+          INTERFASE2: "",
+          NOM_SISMED: "",
+          FRACCION: 0,
+          VARIABLE: 0,
           ACTIVO: 1,
+          MODULO: "",
         }}
         fields={[
           { name: "ITEM", label: "Código", type: "text", required: true, readOnly: !!itemToEdit },
           { name: "NOMBRE", label: "Descripción", type: "text", required: true },
-          { name: "ABREVIATURA", label: "Abreviatura", type: "text" },
           { name: "PRESENTACION", label: "Presentación", type: "text" },
-          { name: "FAMILIA", label: "Familia", type: "text" },
-          { name: "CLASE", label: "Clase", type: "text" },
-          { name: "GENERICO", label: "Genérico", type: "text" },
-          { name: "LABORATORIO", label: "Laboratorio", type: "text" },
-          { name: "STOCK", label: "Stock", type: "number" },
+          { name: "TIPO_PRODUCTO", label: "Tipo de Producto", type: "text" },
+          { name: "TIPO_PRODUCTO_DESC", label: "Descripción del Tipo de Producto", type: "text" },
+          { name: "CONCENTRACION", label: "Concentración", type: "text" },
+          { name: "INTERFASE2", label: "Cod. Sisméd", type: "text" },
+          { name: "NOM_SISMED", label: "Nombre Sisméd", type: "text" },
+          { name: "FRACCION", label: "Fracción", type: "number" },
+          { name: "VARIABLE", label: "Variable", type: "number" },
           { 
             name: "ACTIVO", 
             label: "Estado", 
@@ -512,6 +803,7 @@ export default function ItemsPage() {
               { value: "0", label: "Inactivo" },
             ]
           },
+          { name: "MODULO", label: "Módulo", type: "text" },
         ]}
       />
 
@@ -523,21 +815,134 @@ export default function ItemsPage() {
         onSave={handleSavePrecio}
         defaultValues={precioToEdit || {
           ITEM: selectedItem,
-          PRECIOA: 0,
-          PRECIOB: 0,
-          PRECIOC: 0,
+          PROMEDIO: 0,
           COSTO: 0,
           UTILIDAD: 0,
+          PRECIOPUB: 0,
+          DESCUENTO: 0,
+          PRECIO: 0
         }}
         fields={[
           { name: "ITEM", label: "Código Item", type: "text", required: true, readOnly: true },
-          { name: "PRECIOA", label: "Precio A", type: "number", required: true },
-          { name: "PRECIOB", label: "Precio B", type: "number", required: true },
-          { name: "PRECIOC", label: "Precio C", type: "number", required: true },
-          { name: "COSTO", label: "Costo", type: "number" },
-          { name: "UTILIDAD", label: "Utilidad", type: "number" },
+          { 
+            name: "PROMEDIO", 
+            label: "Promedio", 
+            type: "number", 
+            required: true,
+          },
+          { 
+            name: "COSTO", 
+            label: "Costo", 
+            type: "number", 
+            required: true,
+            onChange: (e, formData, setFormData) => {
+              const costo = parseFloat(e.target.value) || 0;
+              const utilidad = parseFloat(formData.UTILIDAD) || 0;
+              // Precio Publico = Costo * (1 + porcentaje de utilidad)
+              const preciopub = costo * (1 + (utilidad / 100));
+              const descuento = parseFloat(formData.DESCUENTO) || 0;
+              // Precio Venta = Precio Publico * (1 - porcentaje de descuento)
+              const precio = preciopub * (1 - (descuento / 100));
+              
+              setFormData({
+                ...formData,
+                COSTO: costo,
+                PRECIOPUB: preciopub,
+                PRECIO: precio
+              });
+            }
+          },
+          { 
+            name: "UTILIDAD", 
+            label: "% de Utilidad", 
+            type: "number", 
+            required: true,
+            onChange: (e, formData, setFormData) => {
+              const costo = parseFloat(formData.COSTO) || 0;
+              const utilidad = parseFloat(e.target.value) || 0;
+              // Precio Publico = Costo * (1 + porcentaje de utilidad)
+              const preciopub = costo * (1 + (utilidad / 100));
+              const descuento = parseFloat(formData.DESCUENTO) || 0;
+              // Precio Venta = Precio Publico * (1 - porcentaje de descuento)
+              const precio = preciopub * (1 - (descuento / 100));
+              
+              setFormData({
+                ...formData,
+                UTILIDAD: utilidad,
+                PRECIOPUB: preciopub,
+                PRECIO: precio
+              });
+            }
+          },
+          { 
+            name: "PRECIOPUB", 
+            label: "Precio Público", 
+            type: "number", 
+            required: true,
+            readOnly: true
+          },
+          { 
+            name: "DESCUENTO", 
+            label: "% Descuento", 
+            type: "number", 
+            required: true,
+            onChange: (e, formData, setFormData) => {
+              const preciopub = parseFloat(formData.PRECIOPUB) || 0;
+              const descuento = parseFloat(e.target.value) || 0;
+              // Precio Venta = Precio Publico * (1 - porcentaje de descuento)
+              const precio = preciopub * (1 - (descuento / 100));
+              
+              setFormData({
+                ...formData,
+                DESCUENTO: descuento,
+                PRECIO: precio
+              });
+            }
+          },
+          { 
+            name: "PRECIO", 
+            label: "Precio Venta", 
+            type: "number", 
+            required: true,
+            readOnly: true
+          }
         ]}
       />
+
+      {/* Diálogo para filtrar items */}
+      <ConfirmDialog
+        open={filterDialogOpen}
+        onOpenChange={setFilterDialogOpen}
+        title="Filtrar Items"
+        description="Seleccione el tipo de items que desea visualizar."
+        confirmText="Aplicar"
+        cancelText="Cancelar"
+        onConfirm={() => {}}
+      >
+        <div className="flex flex-col gap-4 py-4">
+          <Button 
+            variant={activeFilter === null ? "default" : "outline"} 
+            onClick={() => handleApplyFilter(null)}
+            className="w-full"
+          >
+            Todos los Items
+          </Button>
+          <Button 
+            variant={activeFilter === 1 ? "default" : "outline"} 
+            onClick={() => handleApplyFilter(1)}
+            className="w-full"
+          >
+            Items Activos
+          </Button>
+          <Button 
+            variant={activeFilter === 0 ? "default" : "outline"} 
+            onClick={() => handleApplyFilter(0)}
+            className="w-full"
+          >
+            Items Inactivos
+          </Button>
+        </div>
+      </ConfirmDialog>
     </div>
   )
 }

@@ -41,4 +41,13 @@ export class ClaseService {
       where: { CLASE: id },
     })
   }
+
+  async count(params: {
+    where?: Prisma.CLASEWhereInput
+  }) {
+    const { where } = params
+    return prisma.cLASE.count({
+      where,
+    })
+  }
 }

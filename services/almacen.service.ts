@@ -41,4 +41,13 @@ export class AlmacenService {
       where: { ALMACEN: id },
     })
   }
+
+  async count(params: {
+    where?: Prisma.ALMACENWhereInput
+  }) {
+    const { where } = params
+    return prisma.aLMACEN.count({
+      where,
+    })
+  }
 }

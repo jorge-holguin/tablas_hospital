@@ -8,8 +8,11 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search')
+    const activeFilter = searchParams.get('activeFilter') !== null ? Number(searchParams.get('activeFilter')) : null
     
-    let where = {}
+    let where: Prisma.ITEMWhereInput = {}
+    
+    // Add search filter if provided
     if (search) {
       where = {
         OR: [
@@ -19,7 +22,18 @@ export async function GET(req: NextRequest) {
       }
     }
     
+    // Add active filter if provided
+    if (activeFilter !== null) {
+      where = {
+        ...where,
+        ACTIVO: activeFilter
+      }
+    }
+    
+    console.log('Count API where condition:', JSON.stringify(where))
+    
     const count = await itemService.count({ where })
+    
     return NextResponse.json({ count })
   } catch (error) {
     console.error('Error counting items:', error)

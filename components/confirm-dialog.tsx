@@ -19,6 +19,7 @@ interface ConfirmDialogProps {
   description: string
   confirmText?: string
   cancelText?: string
+  children?: React.ReactNode
 }
 
 export function ConfirmDialog({
@@ -29,6 +30,7 @@ export function ConfirmDialog({
   description,
   confirmText = "Confirmar",
   cancelText = "Cancelar",
+  children,
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -37,6 +39,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
@@ -50,4 +53,3 @@ export function ConfirmDialog({
     </AlertDialog>
   )
 }
-

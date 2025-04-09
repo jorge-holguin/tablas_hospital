@@ -9,10 +9,33 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const take = searchParams.get('take') ? Number(searchParams.get('take')) : 10
     const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0
+    const search = searchParams.get('search') || ''
+    const active = searchParams.get('active')
     
-    const almacenes = await almacenService.findAll({ take, skip })
+    let where: Prisma.ALMACENWhereInput = {}
+    
+    // Agregar filtro de búsqueda si se proporciona
+    if (search) {
+      where = {
+        OR: [
+          { ALMACEN: { contains: search } },
+          { NOMBRE: { contains: search } }
+        ]
+      }
+    }
+    
+    // Agregar filtro de activo si se proporciona
+    if (active !== null && active !== undefined) {
+      where = {
+        ...where,
+        ACTIVO: active === '1' ? 1 : 0
+      }
+    }
+    
+    const almacenes = await almacenService.findAll({ take, skip, where })
     return NextResponse.json(almacenes)
   } catch (error) {
+    console.error('Error fetching almacenes:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

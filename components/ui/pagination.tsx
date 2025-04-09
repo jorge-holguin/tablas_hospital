@@ -4,13 +4,49 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ButtonProps, buttonVariants } from "@/components/ui/button"
 
-const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
+export interface PaginationProps extends React.ComponentProps<"nav"> {
+  pageCount: number
+  pageSize: number
+  pageIndex: number
+  setPageIndex: (page: number) => void
+  setPageSize: (size: number) => void
+}
+
+const Pagination = ({ 
+  className, 
+  pageCount,
+  pageSize,
+  pageIndex,
+  setPageIndex,
+  setPageSize,
+  ...props 
+}: PaginationProps) => (
   <nav
     role="navigation"
     aria-label="pagination"
     className={cn("mx-auto flex w-full justify-center", className)}
     {...props}
-  />
+  >
+    <PaginationContent>
+      <PaginationPrevious 
+        onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
+        disabled={pageIndex === 0}
+      />
+      {Array.from({ length: pageCount }, (_, i) => (
+        <PaginationLink
+          key={i}
+          isActive={pageIndex === i}
+          onClick={() => setPageIndex(i)}
+        >
+          {i + 1}
+        </PaginationLink>
+      ))}
+      <PaginationNext 
+        onClick={() => setPageIndex(Math.min(pageCount - 1, pageIndex + 1))}
+        disabled={pageIndex >= pageCount - 1}
+      />
+    </PaginationContent>
+  </nav>
 )
 Pagination.displayName = "Pagination"
 
@@ -34,24 +70,27 @@ const PaginationItem = React.forwardRef<
 ))
 PaginationItem.displayName = "PaginationItem"
 
-type PaginationLinkProps = {
+interface PaginationItemProps extends ButtonProps {
   isActive?: boolean
-} & Pick<ButtonProps, "size"> &
-  React.ComponentProps<"a">
+  disabled?: boolean
+}
 
 const PaginationLink = ({
   className,
   isActive,
   size = "icon",
+  disabled,
   ...props
-}: PaginationLinkProps) => (
-  <a
+}: PaginationItemProps) => (
+  <button
+    type="button"
     aria-current={isActive ? "page" : undefined}
     className={cn(
       buttonVariants({
         variant: isActive ? "outline" : "ghost",
         size,
       }),
+      disabled && "pointer-events-none opacity-50",
       className
     )}
     {...props}
@@ -61,12 +100,14 @@ PaginationLink.displayName = "PaginationLink"
 
 const PaginationPrevious = ({
   className,
+  disabled,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
+}: PaginationItemProps) => (
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
     className={cn("gap-1 pl-2.5", className)}
+    disabled={disabled}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
@@ -77,12 +118,14 @@ PaginationPrevious.displayName = "PaginationPrevious"
 
 const PaginationNext = ({
   className,
+  disabled,
   ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
+}: PaginationItemProps) => (
   <PaginationLink
     aria-label="Go to next page"
     size="default"
     className={cn("gap-1 pr-2.5", className)}
+    disabled={disabled}
     {...props}
   >
     <span>Next</span>
