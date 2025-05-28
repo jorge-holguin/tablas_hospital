@@ -9,11 +9,80 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const take = searchParams.get('take') ? Number(searchParams.get('take')) : 10
     const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0
+    const search = searchParams.get('search') || ''
+    const active = searchParams.get('active')
+    const tipo = searchParams.get('tipo')
     
-    const consultorios = await consultorioService.findAll({ take, skip })
-    return NextResponse.json(consultorios)
+    console.log('Raw tipo parameter:', tipo)
+    
+    console.log('API request params:', { take, skip, search, active, tipo })
+    
+    let where: Prisma.CONSULTORIOWhereInput = {}
+    
+    // Add search filter if provided
+    if (search) {
+      where = {
+        OR: [
+          { CONSULTORIO: { contains: search } },
+          { NOMBRE: { contains: search } }
+        ]
+      }
+      console.log('Search filter added:', search)
+    }
+    
+    // Add active filter if provided
+    if (active !== null && active !== undefined) {
+      where = {
+        ...where,
+        ACTIVO: active
+      }
+      console.log('Active filter added:', active)
+    }
+    
+    // Add tipo filter if provided
+    if (tipo !== null && tipo !== undefined && tipo !== '') {
+      where = {
+        ...where,
+        TIPO: tipo
+      }
+      console.log('Tipo filter added:', tipo, typeof tipo)
+    }
+    
+    console.log('Final where condition:', JSON.stringify(where, null, 2))
+    
+    // Obtener los datos y el conteo total
+    const [consultorios, totalCount] = await Promise.all([
+      consultorioService.findAll({ take, skip, where }),
+      consultorioService.count({ where })
+    ])
+
+    // Devolver los datos junto con metadatos de paginación
+    return NextResponse.json({
+      data: consultorios,
+      meta: {
+        total: totalCount,
+        page: Math.floor(skip / take) + 1,
+        pageSize: take,
+        pageCount: Math.ceil(totalCount / take)
+      }
+    })
   } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    // Capturar información detallada del error
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    console.error('Error fetching consultorios:', { 
+      message: errorMessage,
+      stack: errorStack,
+      url: req.url
+    })
+    
+    // Devolver un mensaje de error más informativo
+    return NextResponse.json({ 
+      error: 'Error al obtener datos de consultorios', 
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
   }
 }
 

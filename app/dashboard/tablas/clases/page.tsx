@@ -10,12 +10,14 @@ interface Clase {
   CLASE: string
   NOMBRE: string
   ACTIVO: number
+  CLASIFICADOR: string
 }
 
 const defaultValues: Partial<Clase> = {
   CLASE: "",
   NOMBRE: "",
-  ACTIVO: 1
+  ACTIVO: 1,
+  CLASIFICADOR: ""
 }
 
 export default function ClasesPage() {
@@ -66,6 +68,10 @@ export default function ClasesPage() {
             accessorKey: "ACTIVO",
             header: "ACTIVO",
             cell: ({ row }) => Number(row.original.ACTIVO) === 1 ? "Sí" : "No"
+          },
+          {
+            accessorKey: "CLASIFICADOR",
+            header: "CLASIFICADOR"
           }
         ]
 
@@ -101,7 +107,8 @@ export default function ClasesPage() {
                 columns: [
                   { key: "CLASE", header: "CLASE" },
                   { key: "NOMBRE", header: "NOMBRE" },
-                  { key: "ACTIVO", header: "ACTIVO", format: (value) => Number(value) === 1 ? "Sí" : "No" }
+                  { key: "ACTIVO", header: "ACTIVO", format: (value) => Number(value) === 1 ? "Sí" : "No" },
+                  { key: "CLASIFICADOR", header: "CLASIFICADOR" }
                 ]
               }}
               exportConfig={{
@@ -110,7 +117,8 @@ export default function ClasesPage() {
                 columns: [
                   { key: "CLASE", header: "CLASE" },
                   { key: "NOMBRE", header: "NOMBRE" },
-                  { key: "ACTIVO", header: "ACTIVO", format: (value) => Number(value) === 1 ? "Sí" : "No" }
+                  { key: "ACTIVO", header: "ACTIVO", format: (value) => Number(value) === 1 ? "Sí" : "No" },
+                  { key: "CLASIFICADOR", header: "CLASIFICADOR" } 
                 ]
               }}
             />
@@ -134,6 +142,12 @@ export default function ClasesPage() {
                     { value: "1", label: "Sí" },
                     { value: "0", label: "No" }
                   ]
+                },
+                { 
+                  name: "CLASIFICADOR", 
+                  label: "Clasificador", 
+                  type: "text", 
+                  required: true 
                 }
               ]}
             />

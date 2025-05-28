@@ -5,6 +5,7 @@ interface DataProviderProps<T extends Record<string, any>> {
   apiEndpoint: string
   idField: string
   defaultValues: Partial<T>
+  extraParams?: Record<string, any>
   children: (props: {
     data: T[]
     loading: boolean
@@ -41,6 +42,7 @@ export function DataProvider<T extends Record<string, any>>({
   apiEndpoint, 
   idField, 
   defaultValues,
+  extraParams = {},
   children 
 }: DataProviderProps<T>) {
   const { toast } = useToast()
@@ -64,7 +66,17 @@ export function DataProvider<T extends Record<string, any>>({
       const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''
       const activeParam = filterActive !== null ? `&active=${filterActive}` : ''
       
-      const url = `/api/tablas/${apiEndpoint}?take=${pageSize}&skip=${skip}${searchParam}${activeParam}`
+      // Añadir extraParams a la URL
+      let extraParamsString = ''
+      if (extraParams) {
+        Object.entries(extraParams).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            extraParamsString += `&${key}=${encodeURIComponent(String(value))}`
+          }
+        })
+      }
+      
+      const url = `/api/tablas/${apiEndpoint}?take=${pageSize}&skip=${skip}${searchParam}${activeParam}${extraParamsString}`
       console.log('Fetching data from:', url)
       
       const response = await fetch(url)
@@ -73,27 +85,77 @@ export function DataProvider<T extends Record<string, any>>({
         console.error(`Error response from ${url}:`, errorText)
         throw new Error(`Error al cargar ${apiEndpoint}: ${response.status} ${response.statusText}`)
       }
-      const responseData = await response.json()
-      setData(responseData)
       
-      // Obtener el conteo total para la paginación
-      try {
-        const countUrl = `/api/tablas/${apiEndpoint}/count${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}${activeParam}`
-        console.log('Fetching count from:', countUrl)
+      // Check content type to avoid JSON parsing errors
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text()
+        console.error(`Received non-JSON response from ${url}:`, responseText)
+        throw new Error(`Error: La respuesta del servidor no es JSON válido (${contentType})`)
+      }
+      
+      const responseJson = await response.json()
+      
+      // Verificar si la respuesta tiene el nuevo formato (data + meta) o el formato antiguo
+      if (responseJson.data && responseJson.meta) {
+        // Nuevo formato con metadatos
+        setData(responseJson.data)
+        setTotalItems(responseJson.meta.total)
+        console.log(`Datos cargados: ${responseJson.data.length}, Total: ${responseJson.meta.total}`)
+      } else {
+        // Formato antiguo (array directo)
+        setData(responseJson)
         
-        const countResponse = await fetch(countUrl)
-        if (!countResponse.ok) {
-          const errorText = await countResponse.text()
-          console.error('Error en la respuesta del conteo:', errorText)
-          // No lanzar error, usar la longitud de los datos como fallback
-          setTotalItems(responseData.length)
-        } else {
-          const { count } = await countResponse.json()
-          setTotalItems(count)
+        // Obtener el conteo total para la paginación
+        try {
+          // Añadir extraParams a la URL de conteo
+          let extraParamsCountString = ''
+          if (extraParams) {
+            Object.entries(extraParams).forEach(([key, value]) => {
+              if (value !== null && value !== undefined) {
+                extraParamsCountString += `&${key}=${encodeURIComponent(String(value))}`
+              }
+            })
+          }
+          
+          const countUrl = `/api/tablas/${apiEndpoint}/count${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '?'}${!searchTerm ? '' : '&'}${activeParam ? activeParam.substring(1) : ''}${extraParamsCountString}`
+          console.log('Fetching count from:', countUrl)
+          
+          const countResponse = await fetch(countUrl)
+          if (!countResponse.ok) {
+            console.error('Error en la respuesta del conteo:', countResponse.status, countResponse.statusText)
+            // No lanzar error, usar la longitud de los datos como fallback
+            setTotalItems(responseJson.length)
+          } else {
+            try {
+              const countData = await countResponse.json()
+              // Manejar diferentes formatos de respuesta
+              if (typeof countData === 'number') {
+                // Si la respuesta es directamente un número
+                console.log('Respuesta de conteo recibida como número:', countData)
+                setTotalItems(countData)
+              } else if (countData && typeof countData.count === 'number') {
+                // Si la respuesta tiene una propiedad count
+                console.log('Respuesta de conteo recibida con propiedad count:', countData.count)
+                setTotalItems(countData.count)
+              } else if (countData && typeof countData.total === 'number') {
+                // Si la respuesta tiene una propiedad total
+                console.log('Respuesta de conteo recibida con propiedad total:', countData.total)
+                setTotalItems(countData.total)
+              } else {
+                // Si no podemos determinar el conteo, usar la longitud de los datos
+                console.warn('Formato de respuesta de conteo desconocido:', countData)
+                setTotalItems(responseJson.length)
+              }
+            } catch (parseError) {
+              console.error('Error al parsear la respuesta del conteo:', parseError)
+              setTotalItems(responseJson.length)
+            }
+          }
+        } catch (countError) {
+          console.error('Error al obtener el conteo:', countError)
+          setTotalItems(responseJson.length)
         }
-      } catch (countError) {
-        console.error('Error al obtener el conteo:', countError)
-        setTotalItems(responseData.length)
       }
     } catch (error) {
       console.error(`Error loading ${apiEndpoint}:`, error)
@@ -103,6 +165,7 @@ export function DataProvider<T extends Record<string, any>>({
         variant: "destructive"
       })
       setData([])
+      setTotalItems(0)
     } finally {
       setLoading(false)
     }

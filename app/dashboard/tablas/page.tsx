@@ -2,20 +2,33 @@
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
-import {
+import { 
+  ArrowLeft,
   Package,
-  Tag,
   FileText,
-  Database,
   Home,
-  ShieldCheck,
+  Stethoscope,
   Building,
   Building2,
-  Stethoscope,
-  UserSquare,
+  ShieldCheck,
+  MapPin,
+  Clock,
+  Users,
+  User,
+  DollarSign,
+  CreditCard,
+  Clipboard,
+  ClipboardList,
+  ClipboardCheck,
+  BarChart,
+  Layers,
+  Globe,
+  HeartHandshake,
+  GraduationCap,
+  Briefcase,
+  Church
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function TablasPage() {
   const router = useRouter()
@@ -23,72 +36,192 @@ export default function TablasPage() {
   // Categorías y subcategorías
   const categories = [
     {
-      title: "Productos y Precios",
-      description: "Gestión de productos, precios y presentaciones",
+      title: "Sistema de Caja",
+      description: "Tablas para el Sistema de Caja",
       items: [
-        { name: "Items", href: "/dashboard/tablas/items", icon: <Package className="h-6 w-6 text-blue-500" /> },
-        { name: "Precios", href: "/dashboard/tablas/precios", icon: <Tag className="h-6 w-6 text-blue-500" /> },
+        { name: "Grupo Recaudacion", href: "/dashboard/tablas/grupos-recaudacion", icon: <DollarSign className="h-6 w-6 text-blue-500" /> },
         {
-          name: "Presentaciones",
-          href: "/dashboard/tablas/presentaciones",
-          icon: <Package className="h-6 w-6 text-blue-500" />,
-        },
-        {
-          name: "Genéricos",
-          href: "/dashboard/tablas/genericos",
+          name: "Grupo Liquidacion",
+          href: "/dashboard/tablas/grupos-liquidacion",
           icon: <FileText className="h-6 w-6 text-blue-500" />,
         },
-      ],
-    },
-    {
-      title: "Clasificaciones",
-      description: "Categorización y clasificación de productos",
-      items: [
-        { name: "Familias", href: "/dashboard/tablas/familias", icon: <Database className="h-6 w-6 text-blue-500" /> },
-        { name: "Clases", href: "/dashboard/tablas/clases", icon: <Database className="h-6 w-6 text-blue-500" /> },
-        { name: "Almacenes", href: "/dashboard/tablas/almacenes", icon: <Home className="h-6 w-6 text-blue-500" /> },
         {
-          name: "Tipo de Atención",
-          href: "/dashboard/tablas/tipo-atencion",
-          icon: <ShieldCheck className="h-6 w-6 text-blue-500" />,
+          name: "Clasificador",
+          href: "/dashboard/tablas/clasificadores",
+          icon: <Layers className="h-6 w-6 text-blue-500" />,
         },
-      ],
-    },
-    {
-      title: "Proveedores y Laboratorios",
-      description: "Gestión de proveedores y laboratorios",
-      items: [
         {
-          name: "Proveedores",
-          href: "/dashboard/tablas/proveedores",
+          name: "Paciente",
+          href: "/dashboard/tablas/pacientes",
+          icon: <User className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Consultorio",
+          href: "/dashboard/tablas/consultorios",
           icon: <Building className="h-6 w-6 text-blue-500" />,
         },
         {
-          name: "Laboratorios",
-          href: "/dashboard/tablas/laboratorios",
-          icon: <Building2 className="h-6 w-6 text-blue-500" />,
+          name: "Orígenes",
+          href: "/dashboard/tablas/origenes",
+          icon: <MapPin className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Turno",
+          href: "/dashboard/tablas/turnos",
+          icon: <Clock className="h-6 w-6 text-blue-500" />,
         },
       ],
     },
     {
-      title: "Seguros y Personal",
-      description: "Gestión de personal médico y seguros",
+      title: "Sistema de Farmacia",
+      description: "Tabla para el Sistema de Farmacia",
       items: [
         {
-          name: "Consultorios",
+          name: "Tipo de Atención - Orígenes",
+          href: "/dashboard/tablas/origenes",
+          icon: <MapPin className="h-6 w-6 text-blue-500" />,
+        },
+        
+        {
+          name: "Consultorio",
           href: "/dashboard/tablas/consultorios",
-          icon: <Home className="h-6 w-6 text-blue-500" />,
+          icon: <Building className="h-6 w-6 text-blue-500" />,
         },
         { name: "Médicos", href: "/dashboard/tablas/medicos", icon: <Stethoscope className="h-6 w-6 text-blue-500" /> },
         {
-          name: "Personal",
-          href: "/dashboard/tablas/personal",
-          icon: <UserSquare className="h-6 w-6 text-blue-500" />,
+          name: "Tipo de Transacción",
+          href: "/dashboard/tablas/tipo-transaccion",
+          icon: <CreditCard className="h-6 w-6 text-blue-500" />,
+        },
+        { name: "Almacenes", href: "/dashboard/tablas/almacenes", icon: <Home className="h-6 w-6 text-blue-500" /> },
+        { name: "Items", href: "/dashboard/tablas/items", icon: <Package className="h-6 w-6 text-blue-500" /> },
+        {
+          name: "Cuentas",
+          href: "/dashboard/cuentas",
+          icon: <DollarSign className="h-6 w-6 text-blue-500" />,
         },
         {
-          name: "Empresas Aseguradoras",
-          href: "/dashboard/tablas/empresas-aseguradoras",
+          name: "Atención",
+          href: "/dashboard/tablas/tipo-atencion",
+          icon: <ClipboardCheck className="h-6 w-6 text-blue-500" />,
+        },
+      ],
+    }, 
+    {
+      title: "Sistema de Admision",
+      description: "Tablas del Sistema de Admision",
+      items: [
+        {
+          name: "Origen de Hospitalización",
+          href: "/dashboard/tablas/origen-hospitalizacion",
+          icon: <MapPin className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Consultorios - Especialidad",
+          href: "/dashboard/tablas/consultorios",
+          icon: <Building className="h-6 w-6 text-blue-500" />,
+        },
+        { name: "Médicos", href: "/dashboard/tablas/medicos", icon: <Stethoscope className="h-6 w-6 text-blue-500" /> },
+        {
+          name: "Diagnóstico",
+          href: "/dashboard/tablas/diagnostico",
+          icon: <ClipboardList className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Destinos",
+          href: "/dashboard/tablas/destinos",
+          icon: <MapPin className="h-6 w-6 text-blue-500" />,
+        },
+        /*{
+          name: "Proveedores",
+          href: "/dashboard/tablas/proveedores",
+          icon: <Building className="h-6 w-6 text-blue-500" />,
+        },*/
+        {
+          name: "Laboratorios",
+          href: "/dashboard/tablas/laboratorios",
+          icon: <Clipboard className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Pacientes",
+          href: "/dashboard/tablas/pacientes",
+          icon: <User className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Etnias",
+          href: "/dashboard/tablas/etnias",
+          icon: <Users className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Tipos de Documento",
+          href: "/dashboard/tablas/tipos-documento",
+          icon: <FileText className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Seguros",
+          href: "/dashboard/tablas/seguros",
           icon: <ShieldCheck className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Paises",
+          href: "/dashboard/tablas/pais",
+          icon: <Globe className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Localidades",
+          href: "/dashboard/tablas/localidad",
+          icon: <MapPin className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Estado Civil",
+          href: "/dashboard/tablas/estado-civil",
+          icon: <HeartHandshake className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Grado Instrucción",
+          href: "/dashboard/tablas/grado-instruccion",
+          icon: <GraduationCap className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Ocupaciones",
+          href: "/dashboard/tablas/ocupacion",
+          icon: <Briefcase className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Religiones",
+          href: "/dashboard/tablas/religion",
+          icon: <Church className="h-6 w-6 text-blue-500" />,
+        },
+      ],
+    },
+    {
+      title: "Sistema de Consultorios Externos",
+      description: "Tabla para el Sistema de Consultorios Externos",
+      items: [
+        {
+          name: "Consultorios - Especialidad",
+          href: "/dashboard/tablas/consultorios",
+          icon: <Building className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Financiamientos",
+          href: "/dashboard/tablas/financiamientos",
+          icon: <DollarSign className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Tipos de Documento",
+          href: "/dashboard/tablas/tipos-documento",
+          icon: <FileText className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Ubigeos - Procedencia",
+          href: "/dashboard/tablas/ubigeos",
+          icon: <MapPin className="h-6 w-6 text-blue-500" />,
+        },
+        {
+          name: "Diagnósticos HIS V2",
+          href: "/dashboard/tablas/diagnosticos-his-v2",
+          icon: <BarChart className="h-6 w-6 text-blue-500" />,
         },
       ],
     },
@@ -106,31 +239,28 @@ export default function TablasPage() {
 
       <div className="grid gap-8">
         {categories.map((category, index) => (
-          <div key={index} className="space-y-4">
-            <h2 className="text-2xl font-semibold border-b pb-2">{category.title}</h2>
-            <p className="text-muted-foreground text-lg">{category.description}</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {category.items.map((item) => (
-                <Link key={item.href} href={item.href} className="block">
-                  <Card className="h-full transition-all hover:shadow-md hover:border-primary">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        {item.icon}
-                        {item.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-base">Gestionar {item.name.toLowerCase()}</CardDescription>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <Card key={index}>
+            <CardHeader>
+              <CardTitle>{category.title}</CardTitle>
+              <CardDescription>{category.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {category.items.map((item, itemIndex) => (
+                  <Link
+                    key={itemIndex}
+                    href={item.href}
+                    className="flex items-center p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="mr-3">{item.icon}</div>
+                    <div>{item.name}</div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>
   )
 }
-

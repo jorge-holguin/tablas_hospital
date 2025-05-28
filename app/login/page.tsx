@@ -55,6 +55,42 @@ export default function LoginPage() {
     }
   }
 
+  const handleViewerAccess = async () => {
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: 'LECTOR', password: '1234' }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al iniciar sesión como visualizador')
+      }
+
+      // Guardar token en cookie para que el middleware lo pueda leer
+      setCookie('token', data.token)
+      
+      // Guardar información del usuario en localStorage para uso en la UI
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hospital-user", JSON.stringify(data.user))
+      }
+      
+      router.push("/dashboard")
+    } catch (error) {
+      console.error('Error de login como visualizador:', error)
+      setError(error instanceof Error ? error.message : 'Error al acceder como visualizador')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
@@ -79,7 +115,7 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="username">Usuario</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
@@ -96,7 +132,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">Contraseña</Label>ac
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
@@ -109,15 +145,35 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-              </div>
+              </div> */}
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
+              {/* <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
                 {loading ? "Verificando..." : "Ingresar al Sistema"}
               </Button>
+               */}
+              <div className="relative pt-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  {/* <span className="bg-background px-2 text-muted-foreground">
+                    O
+                  </span> */}
+                </div>
+              </div>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center text-sm text-muted-foreground">
-            <p>Sistema de Farmacia - SIGSALUD</p>
+          <CardFooter className="flex flex-col gap-4 ">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full bg-primary hover:bg-primary/90 text-white" 
+              onClick={handleViewerAccess} 
+              disabled={loading}
+            >
+              {loading ? "Verificando..." : "Acceder como Visualizador"}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">Sistema de Farmacia - SIGSALUD</p>
           </CardFooter>
         </Card>
 

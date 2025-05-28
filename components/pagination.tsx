@@ -21,9 +21,9 @@ export function Pagination({ totalItems, pageSize, currentPage, onPageChange, on
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Filas por página</span>
-        <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
+        <Select value={(pageSize || 10).toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
           <SelectTrigger className="h-8 w-[70px]">
-            <SelectValue placeholder={pageSize.toString()} />
+            <SelectValue placeholder={(pageSize || 10).toString()} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="10">10</SelectItem>

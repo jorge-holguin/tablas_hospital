@@ -7,8 +7,8 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirigir a la página de login
-    router.push("/login")
+    // Redirigir directamente al dashboard para usuarios lectores
+    router.push("/dashboard/tablas")
   }, [router])
 
   return (

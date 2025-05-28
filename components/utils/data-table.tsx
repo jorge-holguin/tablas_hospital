@@ -46,7 +46,7 @@ export interface DataTableProps<T> {
     columns: Array<{
       key: string
       header: string
-      format?: (value: any) => string
+      format?: (value: any, row?: Record<string, any>) => string
     }>
   }
   exportConfig?: {
@@ -55,7 +55,7 @@ export interface DataTableProps<T> {
     columns: Array<{
       key: string
       header: string
-      format?: (value: any) => string
+      format?: (value: any, row?: Record<string, any>) => string
     }>
   }
 }

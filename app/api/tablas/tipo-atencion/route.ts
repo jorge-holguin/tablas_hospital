@@ -1,63 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TipoAtencionService } from '@/services/tipo-atencion.service'
+import { Prisma } from '@prisma/client'
 
 const tipoAtencionService = new TipoAtencionService()
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const take = Number(searchParams.get('take') || '10')
-    const skip = Number(searchParams.get('skip') || '0')
-    const search = searchParams.get('search')
+    const { searchParams } = new URL(req.url)
+    const take = searchParams.get('take') ? Number(searchParams.get('take')) : 10
+    const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0
+    const search = searchParams.get('search') || ''
     const active = searchParams.get('active')
-
-    // Construir el filtro de búsqueda
-    let whereClause: any = {}
     
+    let where: Prisma.TIPO_ATENCIONWhereInput = {}
+    
+    // Add search filter if provided
     if (search) {
-      whereClause.OR = [
-        { TIPO_ATENCION: { contains: search, mode: 'insensitive' } },
-        { NOMBRE: { contains: search, mode: 'insensitive' } }
-      ]
+      where = {
+        OR: [
+          { TIPO_ATENCION: { contains: search } },
+          { NOMBRE: { contains: search } }
+        ]
+      }
     }
     
+    // Add active filter if provided
     if (active !== null && active !== undefined) {
-      whereClause.ACTIVO = Number(active)
+      where = {
+        ...where,
+        ACTIVO: active
+      }
     }
-
-    const tiposAtencion = await tipoAtencionService.findAll({
-      take,
-      skip,
-      where: whereClause,
-      orderBy: { TIPO_ATENCION: 'asc' }
-    })
-
-    return NextResponse.json(tiposAtencion)
-  } catch (error: any) {
-    console.error('Error en GET /api/tablas/tipo-atencion:', error)
-    return NextResponse.json(
-      { error: 'Error al obtener los tipos de atención', details: error.message },
-      { status: 500 }
-    )
+    
+    const tipoAtenciones = await tipoAtencionService.findAll({ take, skip, where })
+    return NextResponse.json(tipoAtenciones)
+  } catch (error) {
+    console.error('Error fetching tipo de atenciones:', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
-    
-    // Asegurar que ACTIVO sea un número
-    if (body.ACTIVO !== undefined) {
-      body.ACTIVO = Number(body.ACTIVO)
-    }
-    
-    const tipoAtencion = await tipoAtencionService.create(body)
+    const data = await req.json()
+    const tipoAtencion = await tipoAtencionService.create(data)
     return NextResponse.json(tipoAtencion, { status: 201 })
-  } catch (error: any) {
-    console.error('Error en POST /api/tablas/tipo-atencion:', error)
-    return NextResponse.json(
-      { error: 'Error al crear el tipo de atención', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

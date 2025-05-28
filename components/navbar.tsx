@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
 import {
   Database,
   Home,
@@ -31,8 +32,10 @@ import {
   ShieldCheck,
   Stethoscope,
   UserSquare,
+  EyeIcon,
 } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
+import { useReadOnlyPermissions } from "@/hooks/useReadOnlyPermissions"
 
 // Define types for navigation items
 interface SubItem {
@@ -59,6 +62,7 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const [userName, setUserName] = useState("Usuario")
+  const { isReadOnly, user, hasAccessToSection } = useReadOnlyPermissions()
 
   useEffect(() => {
     // Obtener información del usuario del localStorage
@@ -91,8 +95,7 @@ export default function Navbar() {
           name: "Productos y Precios",
           subItems: [
             { name: "Items", href: "/dashboard/tablas/items", icon: <Package className="h-4 w-4" /> },
-            { name: "Precios", href: "/dashboard/tablas/precios", icon: <Tag className="h-4 w-4" /> },
-            { name: "Presentaciones", href: "/dashboard/tablas/presentaciones", icon: <Package className="h-4 w-4" /> },
+            { name: "PreNsentaciones", href: "/dashboard/tablas/presentaciones", icon: <Package className="h-4 w-4" /> },
             { name: "Genéricos", href: "/dashboard/tablas/genericos", icon: <FileText className="h-4 w-4" /> },
           ],
         },
@@ -121,6 +124,7 @@ export default function Navbar() {
           subItems: [
             { name: "Consultorios", href: "/dashboard/tablas/consultorios", icon: <Home className="h-4 w-4" /> },
             { name: "Médicos", href: "/dashboard/tablas/medicos", icon: <Stethoscope className="h-4 w-4" /> },
+            { name: "Especialidades", href: "/dashboard/tablas/especialidades", icon: <Stethoscope className="h-4 w-4" /> },
             { name: "Personal", href: "/dashboard/tablas/personal", icon: <UserSquare className="h-4 w-4" /> },
             {
               name: "Empresas Aseguradoras",
@@ -251,7 +255,14 @@ export default function Navbar() {
                   Dashboard
                 </Link>
 
-                {navItems.map((item) => (
+                {navItems
+                  .filter(item => {
+                    // Extraer el nombre de la sección de la URL
+                    const sectionName = item.href.split('/').pop() || '';
+                    // Verificar si el usuario tiene acceso a esta sección
+                    return hasAccessToSection(sectionName);
+                  })
+                  .map((item) => (
                   <div key={item.href} className="flex flex-col gap-1">
                     <Link
                       href={item.href}
@@ -309,7 +320,14 @@ export default function Navbar() {
         </div>
 
         <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => (
+          {navItems
+            .filter(item => {
+              // Extraer el nombre de la sección de la URL
+              const sectionName = item.href.split('/').pop() || '';
+              // Verificar si el usuario tiene acceso a esta sección
+              return hasAccessToSection(sectionName);
+            })
+            .map((item) => (
             <div key={item.href} className="relative group">
               <Link
                 href={item.href}
@@ -397,12 +415,24 @@ export default function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 px-3">
-                <User className="h-4 w-4 text-primary" />
+                {isReadOnly ? <EyeIcon className="h-4 w-4 text-primary" /> : <User className="h-4 w-4 text-primary" />}
                 <span className="text-sm">Hola, {userName}</span>
+                {isReadOnly && (
+                  <Badge variant="outline" className="ml-2 text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                    Solo Lectura
+                  </Badge>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+              {isReadOnly && (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                    Modo Solo Lectura
+                  </Badge>
+                </div>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />

@@ -1,37 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AlmacenService } from '@/services/almacen.service'
-import { Prisma } from '@prisma/client'
-
-const almacenService = new AlmacenService()
+import { countAlmacenes } from '@/services/almacen.service'
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const search = searchParams.get('search') || ''
-    const active = searchParams.get('active')
+    const searchParams = req.nextUrl.searchParams
+    const searchTerm = searchParams.get('search') || ''
+    const activo = searchParams.get('active') ? parseInt(searchParams.get('active') || '1') : undefined
+
+    const response = await countAlmacenes(searchTerm, activo)
     
-    let where: Prisma.ALMACENWhereInput = {}
-    
-    if (search) {
-      where = {
-        OR: [
-          { ALMACEN: { contains: search } },
-          { NOMBRE: { contains: search } }
-        ]
-      }
+    if (!response.success) {
+      return NextResponse.json(
+        { error: response.message || 'Error al contar almacenes' },
+        { status: 500 }
+      )
     }
     
-    if (active !== null && active !== undefined) {
-      where = {
-        ...where,
-        ACTIVO: active === '1' ? 1 : 0
-      }
-    }
-    
-    const count = await almacenService.count({ where })
-    return NextResponse.json({ count })
+    return NextResponse.json({ count: response.data.total })
   } catch (error) {
-    console.error('Error counting almacenes:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Error en GET /api/tablas/almacenes/count:', error)
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    )
   }
 }

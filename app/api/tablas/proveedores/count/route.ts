@@ -1,40 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ProveedorService } from '@/services/proveedor.service'
+import { Prisma } from '@prisma/client'
 
 const proveedorService = new ProveedorService()
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search')
+    const { searchParams } = new URL(req.url)
+    const search = searchParams.get('search') || ''
     const active = searchParams.get('active')
-
-    // Construir el filtro de búsqueda
-    let whereClause: any = {}
+    
+    let where: Prisma.PROVEEDORWhereInput = {}
     
     if (search) {
-      whereClause.OR = [
-        { PROVEEDOR: { contains: search, mode: 'insensitive' } },
-        { NOMBRE: { contains: search, mode: 'insensitive' } },
-        { RUC: { contains: search, mode: 'insensitive' } }
-      ]
+      where = {
+        OR: [
+          { PROVEEDOR: { contains: search } },
+          { NOMBRE: { contains: search } },
+          { RUC: { contains: search } }
+        ]
+      }
     }
     
     if (active !== null && active !== undefined) {
-      // Ensure ACTIVO is properly compared as a Decimal type
-      whereClause.ACTIVO = active === '1' ? 1 : 0
+      where = {
+        ...where,
+        ACTIVO: active
+      }
     }
-
-    const count = await proveedorService.count({
-      where: whereClause
-    })
-
+    
+    const count = await proveedorService.count({ where })
     return NextResponse.json({ count })
-  } catch (error: any) {
-    console.error('Error en GET /api/tablas/proveedores/count:', error)
-    return NextResponse.json(
-      { error: 'Error al contar los proveedores', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    console.error('Error counting proveedores:', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

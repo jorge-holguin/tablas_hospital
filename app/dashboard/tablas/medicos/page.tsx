@@ -1,220 +1,376 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, FileSpreadsheet, Search, RefreshCw } from "lucide-react"
-import Link from "next/link"
+import { DataTable } from "@/components/utils/data-table"
+import { DataProvider } from "@/components/utils/data-provider"
+import { EditDialog } from "@/components/edit-dialog"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { ColumnDef } from "@tanstack/react-table"
 
-// Tipos
 interface Medico {
-  id: string
-  nombre: string
-  colegio: string
-  profesion: string
-  especialidad: string
-  cargo: string
-  abreviatura: string
-  consultorio: string
-  activo: boolean
-  old: string
-  colesp: string
-  dni: string
-  hisCodMed: string
-  codhis: string
-  eess: string
-  cc: string
+  MEDICO: string
+  NOMBRE: string
+  COLEGIO: string
+  PROFESION: string
+  ESPECIALIDAD: string
+  CARGO: string
+  ABREVIATURA: string
+  CONSULTORIO: string
+  ACTIVO: string
+  OLD: string
+  COLESP: string
+  DNI: string
+  HIS_COD_MED: string | null
+  CODHIS: string | null
+  EESS: string
+  CONTRATO: string
+  IMPCITA: string
+  FLAT_FECHA: boolean
+  ID_MEDICO: number
+  firma: string
+  tiene_firma: string
+  CODPROFESION: string | null
+  FECHNAC: string | null
+  APATERNO: string
+  AMATERNO: string
+  NOMBRES: string
+  PAIS: string
+  TIPO_DOCUMENTO: string
+  REG_FECHA_CREACION: string | null
+  REG_USUARIO_CREACION: string | null
 }
+
+const defaultValues: Partial<Medico> = {
+  MEDICO: "",
+  NOMBRE: "",
+  COLEGIO: "",
+  PROFESION: "",
+  ESPECIALIDAD: "",
+  CARGO: "",
+  ABREVIATURA: "",
+  CONSULTORIO: "",
+  ACTIVO: "1",
+  OLD: "",
+  COLESP: "",
+  DNI: "",
+  HIS_COD_MED: null,
+  CODHIS: null,
+  EESS: "",
+  CONTRATO: "",
+  IMPCITA: "",
+  FLAT_FECHA: false,
+  ID_MEDICO: 0,
+  firma: "",
+  tiene_firma: "",
+  CODPROFESION: null,
+  FECHNAC: null,
+  APATERNO: "",
+  AMATERNO: "",
+  NOMBRES: "",
+  PAIS: "",
+  TIPO_DOCUMENTO: "",
+  REG_FECHA_CREACION: null,
+  REG_USUARIO_CREACION: null
+}
+
+const columns: ColumnDef<Medico, unknown>[] = [
+  {
+    accessorKey: "MEDICO",
+    header: "CÓDIGO"
+  },
+  {
+    accessorKey: "NOMBRE",
+    header: "NOMBRE"
+  },
+  {
+    accessorKey: "COLEGIO",
+    header: "COLEGIADO"
+  },
+  {
+    accessorKey: "PROFESION",
+    header: "PROFESIÓN"
+  },
+  {
+    accessorKey: "ESPECIALIDAD",
+    header: "ESPECIALIDAD"
+  },
+  {
+    accessorKey: "CARGO",
+    header: "CARGO"
+  },
+  {
+    accessorKey: "ABREVIATURA",
+    header: "ABREVIATURA"
+  },
+  {
+    accessorKey: "CONSULTORIO",
+    header: "CONSULTORIO"
+  },
+  {
+    accessorKey: "ACTIVO",
+    header: "ACTIVO",
+    cell: ({ row }) => (
+      <span>{row.getValue("ACTIVO") === "1" ? "Sí" : "No"}</span>
+    )
+  },
+  {
+    accessorKey: "OLD",
+    header: "OLD"
+  },
+  {
+    accessorKey: "COLESP",
+    header: "COLES"
+  },
+  {
+    accessorKey: "DNI",
+    header: "DNI"
+  },
+  {
+    accessorKey: "HIS_COD_MED",
+    header: "HIS CÓDIGO"
+  },
+  {
+    accessorKey: "CODHIS",
+    header: "CODHIS"
+  },
+  {
+    accessorKey: "EESS",
+    header: "EESS"
+  },
+  {
+    accessorKey: "CONTRATO",
+    header: "CONTRATO"
+  }
+]
 
 export default function MedicosPage() {
-  // Estado para los médicos
-  const [medicos, setMedicos] = useState<Medico[]>([
-    {
-      id: "PCJ",
-      nombre: "PINTADO CABALLERO JOSÉ BELÉN",
-      colegio: "35862",
-      profesion: "MEDICO CARDIOLOGO",
-      especialidad: "0019",
-      cargo: "",
-      abreviatura: "MED",
-      consultorio: "10",
-      activo: true,
-      old: "",
-      colesp: "029702",
-      dni: "09768720",
-      hisCodMed: "47536",
-      codhis: "10976872001",
-      eess: "00000059947",
-      cc: "N",
-    },
-    {
-      id: "PVA",
-      nombre: "PARDAVE VIZURRAGA ANTONIO ELEODORO",
-      colegio: "13054",
-      profesion: "MEDICO",
-      especialidad: "0031",
-      cargo: "",
-      abreviatura: "MED",
-      consultorio: "20",
-      activo: true,
-      old: "",
-      colesp: "007437",
-      dni: "07468806",
-      hisCodMed: "13058",
-      codhis: "10746880601",
-      eess: "00000059947",
-      cc: "N",
-    },
-    {
-      id: "ABC",
-      nombre: "ARROYO BASTO CARLOS ALEJANDRO",
-      colegio: "32776",
-      profesion: "MEDICO",
-      especialidad: "0026",
-      cargo: "",
-      abreviatura: "MED",
-      consultorio: "20",
-      activo: false,
-      old: "",
-      colesp: "",
-      dni: "00000003",
-      hisCodMed: "",
-      codhis: "",
-      eess: "00000059947",
-      cc: "N",
-    },
-    {
-      id: "ABP",
-      nombre: "ABAD BARREDO PEDRO MANUEL",
-      colegio: "015091",
-      profesion: "MEDICO GINECO-OBST",
-      especialidad: "0024",
-      cargo: "",
-      abreviatura: "MED",
-      consultorio: "40",
-      activo: true,
-      old: "",
-      colesp: "019923",
-      dni: "05955940",
-      hisCodMed: "46009",
-      codhis: "10296594001",
-      eess: "00000059947",
-      cc: "N",
-    },
-    {
-      id: "ACF",
-      nombre: "AQUINO CUEVA FRANCISCO JAVIER",
-      colegio: "033111",
-      profesion: "MEDICO",
-      especialidad: "0017",
-      cargo: "",
-      abreviatura: "MED",
-      consultorio: "10",
-      activo: false,
-      old: "",
-      colesp: "",
-      dni: "00000004",
-      hisCodMed: "",
-      codhis: "",
-      eess: "00000059947",
-      cc: "C",
-    },
-  ])
-
-  // Estado para el filtro de búsqueda
-  const [searchTerm, setSearchTerm] = useState("")
-
-  // Filtrar médicos según el término de búsqueda
-  const filteredMedicos = medicos.filter(
-    (medico) =>
-      medico.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      medico.id.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Función para exportar a Excel
-  const handleExportExcel = () => {
-    alert("Exportando a Excel...")
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Médicos</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/tablas">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Regresar
-            </Button>
-          </Link>
-          <Button variant="outline" size="sm" onClick={handleExportExcel}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Exportar Excel
-          </Button>
-        </div>
-      </div>
+    <DataProvider<Medico>
+      apiEndpoint="medicos"
+      idField="MEDICO"
+      defaultValues={defaultValues}
+    >
+      {({
+        data,
+        loading,
+        totalItems,
+        currentPage,
+        setCurrentPage,
+        pageSize,
+        setPageSize,
+        searchTerm,
+        setSearchTerm,
+        filterActive,
+        setFilterActive,
+        selectedItems,
+        setSelectedItems,
+        selectAll,
+        handleSelectAll,
+        handleRefresh,
+        handleNew,
+        handleEdit,
+        handleDelete,
+        handleSaveItem,
+        confirmDelete,
+        editDialogOpen,
+        setEditDialogOpen,
+        confirmDialogOpen,
+        setConfirmDialogOpen,
+        loadData
+      }) => {
+        const columns: ColumnDef<Medico, unknown>[] = [
+          {
+            accessorKey: "MEDICO",
+            header: "CÓDIGO"
+          },
+          {
+            accessorKey: "NOMBRE",
+            header: "NOMBRE"
+          },
+          {
+            accessorKey: "COLEGIO",
+            header: "COLEGIADO"
+          },
+          {
+            accessorKey: "PROFESION",
+            header: "PROFESIÓN"
+          },
+          {
+            accessorKey: "ESPECIALIDAD",
+            header: "ESPECIALIDAD"
+          },
+          {
+            accessorKey: "CARGO",
+            header: "CARGO"
+          },
+          {
+            accessorKey: "ABREVIATURA",
+            header: "ABREVIATURA"
+          },
+          {
+            accessorKey: "CONSULTORIO",
+            header: "CONSULTORIO"
+          },
+          {
+            accessorKey: "ACTIVO",
+            header: "ACTIVO",
+            cell: ({ row }) => (
+              <span>{row.getValue("ACTIVO") === "1" ? "Sí" : "No"}</span>
+            )
+          },
+          {
+            accessorKey: "OLD",
+            header: "OLD"
+          },
+          {
+            accessorKey: "COLESP",
+            header: "COLES"
+          },
+          {
+            accessorKey: "DNI",
+            header: "DNI"
+          },
+          {
+            accessorKey: "HIS_COD_MED",
+            header: "HIS CÓDIGO"
+          },
+          {
+            accessorKey: "CODHIS",
+            header: "CODHIS"
+          },
+          {
+            accessorKey: "EESS",
+            header: "EESS"
+          },
+          {
+            accessorKey: "CONTRATO",
+            header: "CONTRATO"
+          }
+        ]
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre o código..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" size="icon" onClick={() => setSearchTerm("")}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
+        return (
+          <>
+            <DataTable<Medico>
+              title="Tabla de Medicos"
+              columns={columns}
+              data={data}
+              loading={loading}
+              totalItems={totalItems}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              filterActive={filterActive}
+              setFilterActive={setFilterActive}
+              selectedRows={selectedItems}
+              setSelectedRows={setSelectedItems}
+              selectAll={selectAll}
+              onSelectAll={handleSelectAll}
+              idField="MEDICO"
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onNew={handleNew}
+              onRefresh={handleRefresh}
+              backHref="/dashboard/tablas"
+              printConfig={{
+                title: "Reporte de Medicos",
+                data: data,
+                columns: [
+                  { key: "MEDICO", header: "CÓDIGO" },
+                  { key: "NOMBRE", header: "NOMBRE" },
+                  { key: "COLEGIO", header: "COLEGIADO" },
+                  { key: "PROFESION", header: "PROFESIÓN" },
+                  { key: "ESPECIALIDAD", header: "ESPECIALIDAD" },
+                  { key: "CARGO", header: "CARGO" },
+                  { key: "ABREVIATURA", header: "ABREVIATURA" },
+                  { key: "CONSULTORIO", header: "CONSULTORIO" },
+                  { key: "ACTIVO", header: "ACTIVO", format: (value) => value === "1" ? "Sí" : "No" },
+                  { key: "OLD", header: "OLD" },
+                  { key: "COLESP", header: "COLES" },
+                  { key: "DNI", header: "DNI" },
+                  { key: "HIS_COD_MED", header: "HIS CÓDIGO" },
+                  { key: "CODHIS", header: "CODHIS" },
+                  { key: "EESS", header: "EESS" },
+                  { key: "CONTRATO", header: "CONTRATO" }
+                ]
+              }}
+              exportConfig={{
+                filename: "medicos",
+                data: data,
+                columns: [
+                  { key: "MEDICO", header: "CÓDIGO" },
+                  { key: "NOMBRE", header: "NOMBRE" },
+                  { key: "COLEGIO", header: "COLEGIADO" },
+                  { key: "PROFESION", header: "PROFESIÓN" },
+                  { key: "ESPECIALIDAD", header: "ESPECIALIDAD" },
+                  { key: "CARGO", header: "CARGO" },
+                  { key: "ABREVIATURA", header: "ABREVIATURA" },
+                  { key: "CONSULTORIO", header: "CONSULTORIO" },
+                  { key: "ACTIVO", header: "ACTIVO", format: (value) => value === "1" ? "Sí" : "No" },
+                  { key: "OLD", header: "OLD" },
+                  { key: "COLESP", header: "COLES" },
+                  { key: "DNI", header: "DNI" },
+                  { key: "HIS_COD_MED", header: "HIS CÓDIGO" },
+                  { key: "CODHIS", header: "CODHIS" },
+                  { key: "EESS", header: "EESS" },
+                  { key: "CONTRATO", header: "CONTRATO" }
+                ]
+              }}
+            />
 
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">Código</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Colegio</TableHead>
-              <TableHead>Profesión</TableHead>
-              <TableHead>Especialidad</TableHead>
-              <TableHead>Cargo</TableHead>
-              <TableHead>Abreviatura</TableHead>
-              <TableHead>Consultorio</TableHead>
-              <TableHead>Activo</TableHead>
-              <TableHead>DNI</TableHead>
-              <TableHead>HIS Código</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMedicos.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={11} className="text-center py-4">
-                  No se encontraron médicos
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredMedicos.map((medico) => (
-                <TableRow key={medico.id}>
-                  <TableCell>{medico.id}</TableCell>
-                  <TableCell>{medico.nombre}</TableCell>
-                  <TableCell>{medico.colegio}</TableCell>
-                  <TableCell>{medico.profesion}</TableCell>
-                  <TableCell>{medico.especialidad}</TableCell>
-                  <TableCell>{medico.cargo}</TableCell>
-                  <TableCell>{medico.abreviatura}</TableCell>
-                  <TableCell>{medico.consultorio}</TableCell>
-                  <TableCell>{medico.activo ? "Sí" : "No"}</TableCell>
-                  <TableCell>{medico.dni}</TableCell>
-                  <TableCell>{medico.hisCodMed}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+            <EditDialog
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+              title={selectedItems.length === 1 ? "Editar Medico" : "Nuevo Medico"}
+              defaultValues={defaultValues}
+              selectedItem={selectedItems.length === 1 ? selectedItems[0] : null}
+              onSave={handleSaveItem}
+              fields={[
+                { name: "MEDICO", label: "Código", type: "text", required: true, readOnly: selectedItems.length === 1 },
+                { name: "NOMBRE", label: "Nombre", type: "text", required: true },
+                { name: "COLEGIO", label: "COLEGIADO", type: "text", required: true },
+                { name: "PROFESION", label: "PROFESIÓN", type: "text", required: true },
+                { name: "ESPECIALIDAD", label: "ESPECIALIDAD", type: "text", required: true },
+                { name: "CARGO", label: "CARGO", type: "text", required: true },
+                { name: "ABREVIATURA", label: "ABREVIATURA", type: "text", required: true },
+                { name: "CONSULTORIO", label: "CONSULTORIO", type: "text", required: true },
+                { name: "ACTIVO", label: "Activo", type: "select", options: [{ value: "1", label: "Sí" }, { value: "0", label: "No" }] },
+                { name: "OLD", label: "OLD", type: "text", required: true },
+                { name: "COLESP", label: "COLES", type: "text", required: true },
+                { name: "DNI", label: "DNI", type: "text", required: true },
+                { name: "HIS_COD_MED", label: "HIS CÓDIGO", type: "text", required: true },
+                { name: "CODHIS", label: "CODHIS", type: "text", required: true },
+                { name: "EESS", label: "EESS", type: "text", required: true },
+                { name: "CONTRATO", label: "CONTRATO", type: "text", required: true },
+                { name: "IMPCITA", label: "IMPCITA", type: "text", required: true },
+                { name: "FLAT_FECHA", label: "FLAT_FECHA", type: "checkbox", required: true },
+                { name: "ID_MEDICO", label: "ID_MEDICO", type: "number", required: true },
+                { name: "firma", label: "firma", type: "text", required: true },
+                { name: "tiene_firma", label: "tiene_firma", type: "text", required: true },
+                { name: "CODPROFESION", label: "CODPROFESION", type: "text", required: true },
+                { name: "FECHNAC", label: "FECHNAC", type: "date", required: true },
+                { name: "APATERNO", label: "APATERNO", type: "text", required: true },
+                { name: "AMATERNO", label: "AMATERNO", type: "text", required: true },
+                { name: "NOMBRES", label: "NOMBRES", type: "text", required: true },
+                { name: "PAIS", label: "PAIS", type: "text", required: true },
+                { name: "TIPO_DOCUMENTO", label: "TIPO_DOCUMENTO", type: "text", required: true },
+                { name: "REG_FECHA_CREACION", label: "REG_FECHA_CREACION", type: "date", required: true },
+                { name: "REG_USUARIO_CREACION", label: "REG_USUARIO_CREACION", type: "text", required: true }
+              ]}
+            />
+
+            <ConfirmDialog
+              open={confirmDialogOpen}
+              onOpenChange={setConfirmDialogOpen}
+              onConfirm={confirmDelete}
+              title="¿Está seguro de eliminar?"
+              description={`Está a punto de eliminar ${selectedItems.length} ${selectedItems.length === 1 ? "almacén" : "almacenes"}. Esta acción no se puede deshacer.`}
+              confirmText="Eliminar"
+            />
+          </>
+        )
+      }}
+    </DataProvider>
   )
 }
-

@@ -1,21 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AlmacenService } from '@/services/almacen.service'
-import { Prisma } from '@prisma/client'
-
-const almacenService = new AlmacenService()
+import { getAlmacenById, updateAlmacen, deleteAlmacen } from '@/services/almacen.service'
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const almacen = await almacenService.findOne(params.id)
-    if (!almacen) {
-      return NextResponse.json({ error: 'Almacén no encontrado' }, { status: 404 })
+    const id = params.id
+    
+    const response = await getAlmacenById(id)
+    
+    if (!response.success) {
+      return NextResponse.json(
+        { error: response.message || `No se encontró el almacén con ID: ${id}` },
+        { status: 404 }
+      )
     }
-    return NextResponse.json(almacen)
+
+    return NextResponse.json(response)
   } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error(`Error en GET /api/tablas/almacenes/${params.id}:`, error)
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    )
   }
 }
 
@@ -24,14 +33,35 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const id = params.id
     const data = await req.json()
-    const almacen = await almacenService.update(params.id, data)
-    return NextResponse.json(almacen)
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+
+    // Asegurarse de que ACTIVO sea un número si está presente
+    if (data.ACTIVO !== undefined) {
+      data.ACTIVO = Number(data.ACTIVO)
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+
+    // Actualizar el almacén
+    const response = await updateAlmacen(id, {
+      NOMBRE: data.NOMBRE,
+      ACTIVO: data.ACTIVO
+    })
+
+    if (!response.success) {
+      return NextResponse.json(
+        { error: response.message || `No se pudo actualizar el almacén con ID: ${id}` },
+        { status: response.message.includes('no encontrado') ? 404 : 400 }
+      )
+    }
+
+    return NextResponse.json(response)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error(`Error en PUT /api/tablas/almacenes/${params.id}:`, error)
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    )
   }
 }
 
@@ -40,12 +70,29 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await almacenService.delete(params.id)
-    return new NextResponse(null, { status: 204 })
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    const id = params.id
+
+    // Eliminar el almacén
+    const response = await deleteAlmacen(id)
+
+    if (!response.success) {
+      // Si el mensaje contiene información sobre dependencias, es un error 400
+      // Si el mensaje indica que no se encontró, es un 404
+      const statusCode = response.message.includes('no encontrado') ? 404 : 400
+      
+      return NextResponse.json(
+        { error: response.message || `Error al eliminar el almacén con ID: ${id}` },
+        { status: statusCode }
+      )
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+
+    return NextResponse.json(response)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error(`Error en DELETE /api/tablas/almacenes/${params.id}:`, error)
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    )
   }
 }

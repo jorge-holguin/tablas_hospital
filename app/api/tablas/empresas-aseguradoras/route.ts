@@ -9,10 +9,33 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const take = searchParams.get('take') ? Number(searchParams.get('take')) : 10
     const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0
+    const search = searchParams.get('search') || ''
+    const active = searchParams.get('active')
     
-    const empresasAseguradoras = await empresaSeguroService.findAll({ take, skip })
+    let where: Prisma.EMPRESASEGUROWhereInput = {}
+    
+    // Add search filter if provided
+    if (search) {
+      where = {
+        OR: [
+          { EMPRESASEGURO: { contains: search } },
+          { NOMBRE: { contains: search } }
+        ]
+      }
+    }
+    
+    // Add active filter if provided
+    if (active !== null && active !== undefined) {
+      where = {
+        ...where,
+        ACTIVO: active
+      }
+    }
+    
+    const empresasAseguradoras = await empresaSeguroService.findAll({ take, skip, where })
     return NextResponse.json(empresasAseguradoras)
   } catch (error) {
+    console.error('Error fetching empresas aseguradoras:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
@@ -20,8 +43,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json()
-    const empresaAseguradora = await empresaSeguroService.create(data)
-    return NextResponse.json(empresaAseguradora, { status: 201 })
+    const empresaSeguro = await empresaSeguroService.create(data)
+    return NextResponse.json(empresaSeguro, { status: 201 })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       return NextResponse.json({ error: error.message }, { status: 400 })

@@ -9,11 +9,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const empresaAseguradora = await empresaSeguroService.findOne(params.id)
-    if (!empresaAseguradora) {
+    const empresaSeguro = await empresaSeguroService.findOne(params.id)
+    if (!empresaSeguro) {
       return NextResponse.json({ error: 'Empresa aseguradora no encontrada' }, { status: 404 })
     }
-    return NextResponse.json(empresaAseguradora)
+    return NextResponse.json(empresaSeguro)
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
@@ -25,8 +25,8 @@ export async function PUT(
 ) {
   try {
     const data = await req.json()
-    const empresaAseguradora = await empresaSeguroService.update(params.id, data)
-    return NextResponse.json(empresaAseguradora)
+    const empresaSeguro = await empresaSeguroService.update(params.id, data)
+    return NextResponse.json(empresaSeguro)
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       return NextResponse.json({ error: error.message }, { status: 400 })

@@ -3,7 +3,7 @@ import React from 'react'
 interface Column {
   key: string
   header: string
-  format?: (value: any) => string
+  format?: (value: any, row?: Record<string, any>) => string
 }
 
 interface PrintHelperProps {
@@ -46,7 +46,7 @@ export const printData = ({ title, data, columns }: PrintHelperProps) => {
               <tr>
                 ${columns.map(col => {
                   const value = item[col.key];
-                  const formattedValue = col.format ? col.format(value) : value;
+                  const formattedValue = col.format ? col.format(value, item) : value;
                   return `<td>${formattedValue !== undefined && formattedValue !== null ? formattedValue : ''}</td>`;
                 }).join('')}
               </tr>

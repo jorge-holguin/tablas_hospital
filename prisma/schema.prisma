@@ -16,7 +16,7 @@ model ABONO {
   TOTAL       Decimal  @default(0, map: "DF__ABONO__TOTAL__44628521") @db.Decimal(18, 2)
   USUARIO     String   @db.Char(15)
   ESTADO      String   @default("1", map: "DF__ABONO__ESTADO__4556A95A") @db.Char(1)
-  CUENTA      CUENTA   @relation("CUENTA_ABONO", fields: [CUENTAID], references: [CUENTAID], onUpdate: NoAction, map: "FK__ABONO__CUENTAID__427A3CAF")
+  CUENTA      CUENTA   @relation(fields: [CUENTAID], references: [CUENTAID], onUpdate: NoAction, map: "FK__ABONO__CUENTAID__427A3CAF")
 }
 
 model ACCESO_BOTONES {
@@ -816,6 +816,7 @@ model CITA {
   NUMREF                                             String?        @db.VarChar(20)
   ENTIDADSIS                                         String?        @default("0", map: "DF__CITA__ENTIDADSIS__570F3DF4") @db.Char(10)
   ID_REFCON                                          Int?
+  RECIBIDO_REFCON                                    Int?
   CONSULTORIO_CITA_CONSULTORIOToCONSULTORIO          CONSULTORIO    @relation("CITA_CONSULTORIOToCONSULTORIO", fields: [CONSULTORIO], references: [CONSULTORIO], onUpdate: NoAction, map: "FK__CITA__CONSULTORI__0A537D18")
   MEDICO_CITA_MEDICOToMEDICO                         MEDICO         @relation("CITA_MEDICOToMEDICO", fields: [MEDICO], references: [MEDICO], onUpdate: NoAction, map: "FK__CITA__MEDICO__095F58DF")
   SEGURO_CITA_SEGUROToSEGURO                         SEGURO         @relation("CITA_SEGUROToSEGURO", fields: [SEGURO], references: [SEGURO], onUpdate: NoAction, map: "FK__CITA__SEGURO__0682EC34")
@@ -877,21 +878,23 @@ model CITA_REPROGRAMACION {
 }
 
 model CLASE {
-  CLASE                  String  @id(clustered: false, map: "PK__CLASE__4222D4EF") @db.Char(10)
-  NOMBRE                 String  @db.VarChar(70)
-  ACTIVO                 Decimal @default(1, map: "DF__CLASE__ACTIVO__412EB0B6") @db.Decimal(3, 0)
-  CLASIFICADOR           String? @db.VarChar(20)
-  ITEM_ITEM_CLASEToCLASE ITEM[]  @relation("ITEM_CLASEToCLASE")
+  CLASE                              String       @id(clustered: false, map: "PK__CLASE__4222D4EF") @db.Char(10)
+  NOMBRE                             String       @db.VarChar(70)
+  ACTIVO                             Decimal      @default(1, map: "DF__CLASE__ACTIVO__412EB0B6") @db.Decimal(3, 0)
+  CLASIFICADOR                       String?      @db.VarChar(20)
+  ITEM_ITEM_CLASEToCLASE             ITEM[]       @relation("ITEM_CLASEToCLASE")
+  ITEM_copy1_ITEM_copy1_CLASEToCLASE ITEM_copy1[] @relation("ITEM_copy1_CLASEToCLASE")
 }
 
 model CLASIFICADOR {
-  CLASIFICADOR                         String  @id(clustered: false, map: "PK__CLASIFICADOR__47DBAE45") @db.Char(12)
-  NOMBRE                               String  @db.VarChar(50)
-  CONTABLEC                            String  @default(" ", map: "DF__CLASIFICA__CONTA__440B1D61") @db.Char(10)
-  CONTABLEA                            String  @default(" ", map: "DF__CLASIFICA__CONTA__44FF419A") @db.Char(10)
-  ABREVIATURA                          String  @default(" ", map: "DF__CLASIFICA__ABREV__45F365D3") @db.VarChar(10)
-  ACTIVO                               Decimal @default(1, map: "DF__CLASIFICA__ACTIV__46E78A0C") @db.Decimal(3, 0)
-  ITEM_ITEM_CLASIFICADORToCLASIFICADOR ITEM[]  @relation("ITEM_CLASIFICADORToCLASIFICADOR")
+  CLASIFICADOR                                     String       @id(clustered: false, map: "PK__CLASIFICADOR__47DBAE45") @db.Char(12)
+  NOMBRE                                           String       @db.VarChar(50)
+  CONTABLEC                                        String       @default(" ", map: "DF__CLASIFICA__CONTA__440B1D61") @db.Char(10)
+  CONTABLEA                                        String       @default(" ", map: "DF__CLASIFICA__CONTA__44FF419A") @db.Char(10)
+  ABREVIATURA                                      String       @default(" ", map: "DF__CLASIFICA__ABREV__45F365D3") @db.VarChar(10)
+  ACTIVO                                           Decimal      @default(1, map: "DF__CLASIFICA__ACTIV__46E78A0C") @db.Decimal(3, 0)
+  ITEM_ITEM_CLASIFICADORToCLASIFICADOR             ITEM[]       @relation("ITEM_CLASIFICADORToCLASIFICADOR")
+  ITEM_copy1_ITEM_copy1_CLASIFICADORToCLASIFICADOR ITEM_copy1[] @relation("ITEM_copy1_CLASIFICADORToCLASIFICADOR")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -972,6 +975,7 @@ model CONSULTORIO {
   ESPEMINSA                                                            Int?
   CITAS_WEB_MINSA                                                      Boolean?
   ESPECIALIDAD_SIS                                                     String?                 @db.VarChar(2)
+  ACTIVO_REFCON                                                        Boolean?
   ATENCIONC_ATENCIONC_CONSULTORIOToCONSULTORIO                         ATENCIONC[]             @relation("ATENCIONC_CONSULTORIOToCONSULTORIO")
   CASEFORM_CASEFORM_CONSULTORIOToCONSULTORIO                           CASEFORM[]              @relation("CASEFORM_CONSULTORIOToCONSULTORIO")
   CITA_CITA_CONSULTORIOToCONSULTORIO                                   CITA[]                  @relation("CITA_CONSULTORIOToCONSULTORIO")
@@ -1019,6 +1023,46 @@ model CONSULTORIO_BACKUP_15072024 {
   CITAS_WEB_MINSA                                                     Boolean?
   ESPECIALIDAD_SIS                                                    String?      @db.VarChar(2)
   ESPECIALIDAD_CONSULTORIO_BACKUP_15072024_ESPECIALIDADToESPECIALIDAD ESPECIALIDAD @relation("CONSULTORIO_BACKUP_15072024_ESPECIALIDADToESPECIALIDAD", fields: [ESPECIALIDAD], references: [ESPECIALIDAD], onUpdate: NoAction, map: "FK__CONSULTOR__ESPEC__27F527AF")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model CONSULTORIO_COPY {
+  CONSULTORIO      String   @db.Char(6)
+  NOMBRE           String   @db.VarChar(50)
+  ABREVIATURA      String   @db.VarChar(15)
+  ESPECIALIDAD     String   @db.Char(4)
+  TIPO             String   @db.Char(2)
+  ROL              Decimal  @db.Decimal(3, 0)
+  MUESTRAROL       Decimal  @db.Decimal(3, 0)
+  CC1              String   @db.VarChar(500)
+  CC2              String   @db.VarChar(500)
+  CC3              String   @db.VarChar(500)
+  ACTIVO           Decimal  @db.Decimal(3, 0)
+  ORDEN            Decimal  @db.Decimal(5, 0)
+  NUMERO           String   @db.Char(3)
+  CUPO             Int?
+  CODESPE          String?  @db.Char(2)
+  NOMESPE          String?  @db.VarChar(20)
+  HIS_ESPECIALIDAD String?  @db.Char(2)
+  ACTIVO_WEB       Boolean?
+  COD_RENAES       String?  @db.Char(6)
+  DESC_RENAES      String?  @db.VarChar(150)
+  HIS_CODSERVICIO  String?  @db.NChar(9)
+  HIS_NOMSERVICIO  String?  @db.VarChar(50)
+  SCONSULTORIO     String?  @db.VarChar(60)
+  SCCONSULTORIO    String?  @db.VarChar(60)
+  ECONSULTORIO     String?  @db.VarChar(60)
+  ECCONSULTORIO    String?  @db.VarChar(60)
+  DEPARTAMENTO     String?  @db.VarChar(60)
+  TIPOSERVICIO     String?  @db.VarChar(20)
+  CODUPSSEEM       String?  @db.VarChar(10)
+  upstrama         String?  @db.VarChar(10)
+  ESPEMINSA        Int?
+  CITAS_WEB_MINSA  Boolean?
+  ESPECIALIDAD_SIS String?  @db.VarChar(2)
+  ACTIVO_REFCON    Boolean?
+
+  @@ignore
 }
 
 model CONSULTORIO_HOSPITALIZA {
@@ -1209,14 +1253,11 @@ model CUENTA {
   ACUENTA                                           Decimal?      @default(0, map: "DF__CUENTA__ACUENTA__55C548A9") @db.Decimal(8, 3)
   SALDO                                             Decimal?      @default(0.0, map: "DF__CUENTA__SALDO__0A3910E8") @db.Decimal(8, 3)
   PAGOS                                             Decimal?      @default(0.0, map: "DF__CUENTA__PAGOS__0B2D3521") @db.Decimal(8, 3)
-
-  abonos                                            ABONO[]       @relation("CUENTA_ABONO")
-
+  abonos                                            ABONO[]
   EMPRESASEGURO_CUENTA_EMPRESASEGUROToEMPRESASEGURO EMPRESASEGURO @relation("CUENTA_EMPRESASEGUROToEMPRESASEGURO", fields: [EMPRESASEGURO], references: [EMPRESASEGURO], onUpdate: NoAction, map: "FK__CUENTA__EMPRESAS__0F183235")
   ORIGEN_CUENTA_ORIGENToORIGEN                      ORIGEN        @relation("CUENTA_ORIGENToORIGEN", fields: [ORIGEN], references: [ORIGEN], onUpdate: NoAction, map: "FK__CUENTA__ORIGEN__0E240DFC")
   SEGURO_CUENTA_SEGUROToSEGURO                      SEGURO        @relation("CUENTA_SEGUROToSEGURO", fields: [SEGURO], references: [SEGURO], onUpdate: NoAction, map: "FK__CUENTA__SEGURO__100C566E")
   PACIENTE_CUENTA_PACIENTEToPACIENTE                PACIENTE      @relation("CUENTA_PACIENTEToPACIENTE", fields: [PACIENTE], references: [PACIENTE], onUpdate: NoAction, map: "FK_CUENTA_PACIENTE")
-
   DESCUENTOC                                        DESCUENTOC[]
   HOSPITALIZA                                       HOSPITALIZA[]
   OBSTETRICIA                                       OBSTETRICIA[]
@@ -1407,6 +1448,7 @@ model ECO_ATENCION {
   NUMREF                             String?   @db.VarChar(20)
   ENTIDADSIS                         String?   @default("0", map: "DF__ECO_ATENC__ENTID__66B17437") @db.Char(10)
   ID_REFCON                          Int?
+  RECIBIDO_REFCON                    Int?
   SEGURO_ECO_ATENCION_SEGUROToSEGURO SEGURO?   @relation("ECO_ATENCION_SEGUROToSEGURO", fields: [SEGURO], references: [SEGURO], onDelete: NoAction, onUpdate: NoAction, map: "FK_ECO_ATENCION_SEGURO")
 
   @@index([FECHA_CITA], map: "FECHA_CITA")
@@ -2037,11 +2079,45 @@ model EXAMEN_MATERIAL {
   FECHA_CREA      DateTime? @db.Date
 }
 
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model FACTURA {
+  NROFACTURA    String    @db.VarChar(10)
+  CUENTAID      String    @db.VarChar(7)
+  FECHA_EMISION DateTime  @db.DateTime
+  ESTADO        String    @db.VarChar(1)
+  SUBTOTAL      Decimal   @default(0, map: "DF__FACTURA__SUBTOTA__36634297") @db.Decimal(18, 2)
+  IGV           Decimal   @default(0, map: "DF__FACTURA__IGV__375766D0") @db.Decimal(18, 2)
+  TOTAL         Decimal   @default(0, map: "DF__FACTURA__TOTAL__384B8B09") @db.Decimal(18, 2)
+  EMPRESASEGURO String?   @db.Char(4)
+  FECHA_PAGO    DateTime? @db.DateTime
+  TIPOPAGO      String?   @db.Char(1)
+  REFERENCIA    String?   @db.VarChar(50)
+  DETALLEPAGO   String?   @db.VarChar(80)
+  NRONOTA       String?   @db.VarChar(10)
+  IMPORTE       Decimal?  @default(0, map: "DF__FACTURA__IMPORTE__393FAF42") @db.Decimal(18, 2)
+  TOTALPAGO     Decimal?  @default(0, map: "DF__FACTURA__TOTALPA__3A33D37B") @db.Decimal(18, 2)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model FACTURADET {
+  NROFACTURA String  @db.VarChar(10)
+  CODIGO     String? @db.VarChar(10)
+  NOMBRE     String  @db.VarChar(100)
+  CANTIDAD   Decimal @default(0, map: "DF__FACTURADE__CANTI__3292B1B3") @db.Decimal(18, 0)
+  PRECIO     Decimal @default(0, map: "DF__FACTURADE__PRECI__3386D5EC") @db.Decimal(18, 2)
+  TOTAL      Decimal @default(0, map: "DF__FACTURADE__TOTAL__347AFA25") @db.Decimal(18, 2)
+
+  @@ignore
+}
+
 model FAMILIA {
-  FAMILIA                    String  @id(clustered: false, map: "PK__FAMILIA__671F4F74") @db.Char(10)
-  NOMBRE                     String  @db.VarChar(70)
-  ACTIVO                     Decimal @default(1, map: "DF__FAMILIA__ACTIVO__662B2B3B") @db.Decimal(3, 0)
-  ITEM_ITEM_FAMILIAToFAMILIA ITEM[]  @relation("ITEM_FAMILIAToFAMILIA")
+  FAMILIA                                String       @id(clustered: false, map: "PK__FAMILIA__671F4F74") @db.Char(10)
+  NOMBRE                                 String       @db.VarChar(70)
+  ACTIVO                                 Decimal      @default(1, map: "DF__FAMILIA__ACTIVO__662B2B3B") @db.Decimal(3, 0)
+  ITEM_ITEM_FAMILIAToFAMILIA             ITEM[]       @relation("ITEM_FAMILIAToFAMILIA")
+  ITEM_copy1_ITEM_copy1_FAMILIAToFAMILIA ITEM_copy1[] @relation("ITEM_copy1_FAMILIAToFAMILIA")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -2197,10 +2273,11 @@ model GENERAL {
 }
 
 model GENERICO {
-  GENERICO                     String  @id(clustered: false, map: "PK__GENERICO__6EC0713C") @db.Char(10)
-  NOMBRE                       String  @default(" ", map: "DF__GENERICO__NOMBRE__6CD828CA") @db.VarChar(70)
-  ACTIVO                       Decimal @default(1, map: "DF__GENERICO__ACTIVO__6DCC4D03") @db.Decimal(3, 0)
-  ITEM_ITEM_GENERICOToGENERICO ITEM[]  @relation("ITEM_GENERICOToGENERICO")
+  GENERICO                                 String       @id(clustered: false, map: "PK__GENERICO__6EC0713C") @db.Char(10)
+  NOMBRE                                   String       @default(" ", map: "DF__GENERICO__NOMBRE__6CD828CA") @db.VarChar(70)
+  ACTIVO                                   Decimal      @default(1, map: "DF__GENERICO__ACTIVO__6DCC4D03") @db.Decimal(3, 0)
+  ITEM_ITEM_GENERICOToGENERICO             ITEM[]       @relation("ITEM_GENERICOToGENERICO")
+  ITEM_copy1_ITEM_copy1_GENERICOToGENERICO ITEM_copy1[] @relation("ITEM_copy1_GENERICOToGENERICO")
 }
 
 model GRADO_INSTRUCCION {
@@ -2247,12 +2324,13 @@ model GRUPO_ETAREO {
 }
 
 model GRUPO_LIQUIDACION {
-  GRUPO_LIQUIDACION                              String   @id(clustered: false, map: "PK__GRUPO_LIQUIDACIO__756D6ECB") @db.Char(2)
-  NOMBRE                                         String   @db.VarChar(50)
-  ACTIVO                                         Decimal? @default(1, map: "DF__GRUPO_LIQ__ACTIV__73852659") @db.Decimal(3, 0)
-  ITEM                                           String?  @db.Char(10)
-  DESCUENTO                                      String?  @default("1", map: "DF__GRUPO_LIQ__DESCU__74794A92") @db.Char(1)
-  ITEM_ITEM_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION ITEM[]   @relation("ITEM_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION")
+  GRUPO_LIQUIDACION                                          String       @id(clustered: false, map: "PK__GRUPO_LIQUIDACIO__756D6ECB") @db.Char(2)
+  NOMBRE                                                     String       @db.VarChar(50)
+  ACTIVO                                                     Decimal?     @default(1, map: "DF__GRUPO_LIQ__ACTIV__73852659") @db.Decimal(3, 0)
+  ITEM                                                       String?      @db.Char(10)
+  DESCUENTO                                                  String?      @default("1", map: "DF__GRUPO_LIQ__DESCU__74794A92") @db.Char(1)
+  ITEM_ITEM_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION             ITEM[]       @relation("ITEM_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION")
+  ITEM_copy1_ITEM_copy1_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION ITEM_copy1[] @relation("ITEM_copy1_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION")
 }
 
 model GRUPO_PATRON_LABO {
@@ -2263,13 +2341,14 @@ model GRUPO_PATRON_LABO {
 }
 
 model GRUPO_RECAUDACION {
-  GRUPO_RECAUDACION                              String  @id(clustered: false, map: "PK__GRUPO_RECAUDACIO__7EF6D905") @db.Char(2)
-  NOMBRE                                         String  @db.VarChar(50)
-  ACTIVO                                         Decimal @default(1, map: "DF__GRUPO_REC__ACTIV__7B264821") @db.Decimal(3, 0)
-  GENERAORDEN                                    Decimal @default(0, map: "DF__GRUPO_REC__GENER__7C1A6C5A") @db.Decimal(18, 0)
-  CONTROLASTOCK                                  Decimal @default(0, map: "DF__GRUPO_REC__CONTR__7D0E9093") @db.Decimal(18, 0)
-  CONTROLPACIENTE                                Decimal @default(0, map: "DF__GRUPO_REC__CONTR__7E02B4CC") @db.Decimal(18, 0)
-  ITEM_ITEM_GRUPO_RECAUDACIONToGRUPO_RECAUDACION ITEM[]  @relation("ITEM_GRUPO_RECAUDACIONToGRUPO_RECAUDACION")
+  GRUPO_RECAUDACION                                          String       @id(clustered: false, map: "PK__GRUPO_RECAUDACIO__7EF6D905") @db.Char(2)
+  NOMBRE                                                     String       @db.VarChar(50)
+  ACTIVO                                                     Decimal      @default(1, map: "DF__GRUPO_REC__ACTIV__7B264821") @db.Decimal(3, 0)
+  GENERAORDEN                                                Decimal      @default(0, map: "DF__GRUPO_REC__GENER__7C1A6C5A") @db.Decimal(18, 0)
+  CONTROLASTOCK                                              Decimal      @default(0, map: "DF__GRUPO_REC__CONTR__7D0E9093") @db.Decimal(18, 0)
+  CONTROLPACIENTE                                            Decimal      @default(0, map: "DF__GRUPO_REC__CONTR__7E02B4CC") @db.Decimal(18, 0)
+  ITEM_ITEM_GRUPO_RECAUDACIONToGRUPO_RECAUDACION             ITEM[]       @relation("ITEM_GRUPO_RECAUDACIONToGRUPO_RECAUDACION")
+  ITEM_copy1_ITEM_copy1_GRUPO_RECAUDACIONToGRUPO_RECAUDACION ITEM_copy1[] @relation("ITEM_copy1_GRUPO_RECAUDACIONToGRUPO_RECAUDACION")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -3004,7 +3083,7 @@ model IQX {
 model ITEM {
   ITEM                                                        String             @id(clustered: false, map: "PK__ITEM__6E8B6712") @db.Char(10)
   NOMBRE                                                      String?            @db.VarChar(250)
-  ABREVIATURA                                                 String?            @db.VarChar(250)
+  ABREVIATURA                                                 String?            @db.VarChar(600)
   GRUPO_RECAUDACION                                           String?            @db.Char(2)
   CLASIFICADOR                                                String?            @db.Char(12)
   GRUPO_LIQUIDACION                                           String?            @db.Char(2)
@@ -3120,6 +3199,61 @@ model item_con_diferencia {
   @@ignore
 }
 
+model ITEM_copy1 {
+  ITEM                                                              String             @id(clustered: false, map: "PK__ITEM_cop__44B0864872AD36C8") @db.Char(10)
+  NOMBRE                                                            String?            @db.VarChar(250)
+  ABREVIATURA                                                       String?            @db.VarChar(250)
+  GRUPO_RECAUDACION                                                 String?            @db.Char(2)
+  CLASIFICADOR                                                      String?            @db.Char(12)
+  GRUPO_LIQUIDACION                                                 String?            @db.Char(2)
+  GRUPO_TARIFARIO                                                   String?            @default("0", map: "DF__ITEM_copy__GRUPO__74957F3A") @db.Char(2)
+  PRESENTACION                                                      String?            @default("0", map: "DF__ITEM_copy__PRESE__7589A373") @db.Char(10)
+  FAMILIA                                                           String?            @default("0", map: "DF__ITEM_copy__FAMIL__767DC7AC") @db.Char(10)
+  CLASE                                                             String?            @default("0", map: "DF__ITEM_copy__CLASE__7771EBE5") @db.Char(10)
+  GENERICO                                                          String?            @default("0", map: "DF__ITEM_copy__GENER__7866101E") @db.Char(10)
+  LABORATORIO                                                       String?            @default("0", map: "DF__ITEM_copy__LABOR__795A3457") @db.Char(10)
+  FRACCION                                                          Decimal?           @default(1, map: "DF__ITEM_copy__FRACC__7A4E5890") @db.Decimal(5, 0)
+  INTERFASE1                                                        String             @default(" ", map: "DF__ITEM_copy__INTER__7B427CC9") @db.Char(15)
+  VARIABLE                                                          String?            @default("N", map: "DF__ITEM_copy__VARIA__7C36A102") @db.Char(1)
+  MODULO                                                            String?            @default(" ", map: "DF__ITEM_copy__MODUL__7D2AC53B") @db.Char(15)
+  ACTIVO                                                            Decimal?           @default(1, map: "DF__ITEM_copy__ACTIV__7E1EE974") @db.Decimal(3, 0)
+  SYSINSERT                                                         String?            @default(" ", map: "DF__ITEM_copy__SYSIN__7F130DAD") @db.VarChar(50)
+  SYSUPDATE                                                         String?            @default(" ", map: "DF__ITEM_copy__SYSUP__000731E6") @db.VarChar(50)
+  SYSDELETE                                                         String?            @default(" ", map: "DF__ITEM_copy__SYSDE__00FB561F") @db.VarChar(50)
+  INTERFASE2                                                        String             @default(" ", map: "DF__ITEM_copy__INTER__01EF7A58") @db.Char(15)
+  PETITORIO                                                         Decimal            @default(0, map: "DF__ITEM_copy__PETIT__02E39E91") @db.Decimal(2, 0)
+  STOCK                                                             Decimal            @default(0, map: "DF__ITEM_copy__STOCK__03D7C2CA") @db.Decimal(10, 0)
+  STOCK_MINIMO                                                      Decimal            @default(0, map: "DF__ITEM_copy__STOCK__04CBE703") @db.Decimal(10, 0)
+  ITEM_EXCLUSION                                                    String             @default(" ", map: "DF__ITEM_copy__ITEM___05C00B3C") @db.Char(10)
+  ESTADO_A_CUENTA                                                   String             @default("4", map: "DF__ITEM_copy__ESTAD__06B42F75") @db.Char(1)
+  STOCK_CRITICO                                                     Decimal            @default(0, map: "DF__ITEM_copy__STOCK__07A853AE") @db.Decimal(10, 0)
+  DISPONIBILIDAD                                                    String?            @db.Char(1)
+  APLICA_DSCTO                                                      String?            @default("S", map: "DF__ITEM_copy__APLIC__089C77E7") @db.Char(1)
+  PRESENTA                                                          String?            @db.VarChar(60)
+  CONCENTRA                                                         String?            @db.VarChar(60)
+  NOMBRECORTO                                                       String?            @db.VarChar(60)
+  CODCPT                                                            String?            @db.VarChar(13)
+  SECCION                                                           String?            @db.VarChar(2)
+  SUBSECCION                                                        String?            @db.VarChar(2)
+  REVISION                                                          String?            @db.VarChar(2)
+  agregar_cpt                                                       String?            @db.VarChar(1)
+  TIPO_PROGRAMA                                                     String?            @default("0", map: "DF__ITEM_copy__TIPO___09909C20") @db.VarChar(4)
+  CPMS                                                              String?            @db.VarChar(13)
+  CLASE_ITEM_copy1_CLASEToCLASE                                     CLASE?             @relation("ITEM_copy1_CLASEToCLASE", fields: [CLASE], references: [CLASE], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__CLASE__0F497576")
+  CLASIFICADOR_ITEM_copy1_CLASIFICADORToCLASIFICADOR                CLASIFICADOR?      @relation("ITEM_copy1_CLASIFICADORToCLASIFICADOR", fields: [CLASIFICADOR], references: [CLASIFICADOR], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__CLASI__0D612D04")
+  FAMILIA_ITEM_copy1_FAMILIAToFAMILIA                               FAMILIA?           @relation("ITEM_copy1_FAMILIAToFAMILIA", fields: [FAMILIA], references: [FAMILIA], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__FAMIL__103D99AF")
+  GENERICO_ITEM_copy1_GENERICOToGENERICO                            GENERICO?          @relation("ITEM_copy1_GENERICOToGENERICO", fields: [GENERICO], references: [GENERICO], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__GENER__0E55513D")
+  GRUPO_RECAUDACION_ITEM_copy1_GRUPO_RECAUDACIONToGRUPO_RECAUDACION GRUPO_RECAUDACION? @relation("ITEM_copy1_GRUPO_RECAUDACIONToGRUPO_RECAUDACION", fields: [GRUPO_RECAUDACION], references: [GRUPO_RECAUDACION], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__GRUPO__0A84C059")
+  GRUPO_LIQUIDACION_ITEM_copy1_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION GRUPO_LIQUIDACION? @relation("ITEM_copy1_GRUPO_LIQUIDACIONToGRUPO_LIQUIDACION", fields: [GRUPO_LIQUIDACION], references: [GRUPO_LIQUIDACION], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__GRUPO__1131BDE8")
+  LABORATORIO_ITEM_copy1_LABORATORIOToLABORATORIO                   LABORATORIO?       @relation("ITEM_copy1_LABORATORIOToLABORATORIO", fields: [LABORATORIO], references: [LABORATORIO], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__LABOR__0B78E492")
+  PRESENTACION_ITEM_copy1_PRESENTACIONToPRESENTACION                PRESENTACION?      @relation("ITEM_copy1_PRESENTACIONToPRESENTACION", fields: [PRESENTACION], references: [PRESENTACION], onDelete: NoAction, onUpdate: NoAction, map: "FK__ITEM_copy__PRESE__0C6D08CB")
+
+  @@index([CODCPT], map: "CODCPT_copy2")
+  @@index([CPMS], map: "CPMS_copy1")
+  @@index([ACTIVO, NOMBRE, APLICA_DSCTO, TIPO_PROGRAMA], map: "IX_ITEM_activo_nombre_copy1")
+  @@index([ACTIVO, TIPO_PROGRAMA], map: "IX_ITEM_activo_tipo_programa_copy1")
+}
+
 model item_por_kardex {
   idkardex        Int       @id(map: "PK_item_por_kardex") @default(autoincrement())
   almacen         String?   @db.VarChar(2)
@@ -3203,6 +3337,7 @@ model LABO_CITAS {
   NUMREF          String?   @db.VarChar(20)
   ENTIDADSIS      String?   @default("0", map: "DF__LABO_CITA__ENTID__67A59870") @db.Char(10)
   ID_REFCON       Int?
+  RECIBIDO_REFCON Int?
 
   @@index([ESTADO], map: "estado_rapida")
   @@index([FECHA_CITA], map: "fecha_cita_rapida")
@@ -3276,23 +3411,21 @@ model LABO_EXAMEN {
 }
 
 model LABORATORIO {
-  LABORATORIO                        String  @id(clustered: false, map: "PK__LABORATORIO__019E3B86") @db.Char(10)
-  NOMBRE                             String  @default(" ", map: "DF__LABORATOR__NOMBR__7CD98669") @db.VarChar(70)
-  RUC                                String  @default(" ", map: "DF__LABORATORIO__RUC__7DCDAAA2") @db.VarChar(11)
-  DIRECCION                          String  @default(" ", map: "DF__LABORATOR__DIREC__7EC1CEDB") @db.VarChar(50)
-  TELEFONO                           String  @default(" ", map: "DF__LABORATOR__TELEF__7FB5F314") @db.VarChar(50)
-  ACTIVO                             Decimal @default(1, map: "DF__LABORATOR__ACTIV__00AA174D") @db.Decimal(3, 0)
-  ITEM_ITEM_LABORATORIOToLABORATORIO ITEM[]  @relation("ITEM_LABORATORIOToLABORATORIO")
+  LABORATORIO                                    String       @id(clustered: false, map: "PK__LABORATORIO__019E3B86") @db.Char(10)
+  NOMBRE                                         String       @default(" ", map: "DF__LABORATOR__NOMBR__7CD98669") @db.VarChar(70)
+  RUC                                            String       @default(" ", map: "DF__LABORATORIO__RUC__7DCDAAA2") @db.VarChar(11)
+  DIRECCION                                      String       @default(" ", map: "DF__LABORATOR__DIREC__7EC1CEDB") @db.VarChar(50)
+  TELEFONO                                       String       @default(" ", map: "DF__LABORATOR__TELEF__7FB5F314") @db.VarChar(50)
+  ACTIVO                                         Decimal      @default(1, map: "DF__LABORATOR__ACTIV__00AA174D") @db.Decimal(3, 0)
+  ITEM_ITEM_LABORATORIOToLABORATORIO             ITEM[]       @relation("ITEM_LABORATORIOToLABORATORIO")
+  ITEM_copy1_ITEM_copy1_LABORATORIOToLABORATORIO ITEM_copy1[] @relation("ITEM_copy1_LABORATORIOToLABORATORIO")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model LOCALIDAD {
-  Localidad String  @db.Char(12)
+  Localidad String  @id @db.Char(12)
   Nombre    String  @default(" ", map: "DF_Localidad_Nombre") @db.VarChar(50)
   Activo    Int     @default(1, map: "DF_Localidad_Activo") @db.TinyInt
   Ubigeo    String? @db.Char(7)
-
-  @@ignore
 }
 
 model LOG_ERROR {
@@ -3432,12 +3565,50 @@ model MEDICO {
   TIPO_DOCUMENTO                                     String?             @db.VarChar(3)
   REG_FECHA_CREACION                                 DateTime?           @default(now(), map: "DF_MEDICO_REG_FECHA_CREACION") @db.DateTime
   REG_USUARIO_CREACION                               String?             @default("user_name()", map: "DF_MEDICO_REG_USUARIO_CREACION") @db.VarChar(30)
+  GENERO                                             String?             @db.Char(1)
   ATENCIONC_ATENCIONC_MEDICOToMEDICO                 ATENCIONC[]         @relation("ATENCIONC_MEDICOToMEDICO")
   CITA_CITA_MEDICOToMEDICO                           CITA[]              @relation("CITA_MEDICOToMEDICO")
   ROLREPROGRAMACION_ROLREPROGRAMACION_MEDICOToMEDICO ROLREPROGRAMACION[] @relation("ROLREPROGRAMACION_MEDICOToMEDICO")
 
   @@index([DNI], map: "IX_MEDICO_dni")
   @@index([MEDICO], map: "IX_MEDICO_medico")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model MEDICO_COPY {
+  MEDICO               String    @db.Char(3)
+  NOMBRE               String    @db.VarChar(50)
+  COLEGIO              String    @db.VarChar(10)
+  PROFESION            String    @db.VarChar(30)
+  ESPECIALIDAD         String    @db.Char(4)
+  CARGO                String    @db.VarChar(30)
+  ABREVIATURA          String    @db.VarChar(3)
+  CONSULTORIO          String    @db.Char(6)
+  ACTIVO               Decimal   @db.Decimal(3, 0)
+  OLD                  String    @db.VarChar(10)
+  COLESP               String    @db.VarChar(50)
+  DNI                  String    @db.VarChar(8)
+  HIS_COD_MED          Float?
+  CODHIS               String?   @db.VarChar(11)
+  EESS                 String    @db.Char(10)
+  CONTRATO             String?   @db.VarChar(100)
+  IMPCITA              String?   @db.VarChar(1)
+  FLAT_FECHA           Boolean?
+  ID_MEDICO            Int       @default(autoincrement())
+  firma                String?   @db.VarChar(50)
+  tiene_firma          String?   @db.VarChar(1)
+  CODPROFESION         String?   @db.Char(2)
+  FECHNAC              String?   @db.VarChar(15)
+  APATERNO             String?   @db.VarChar(80)
+  AMATERNO             String?   @db.VarChar(80)
+  NOMBRES              String?   @db.VarChar(100)
+  PAIS                 String?   @db.Char(3)
+  TIPO_DOCUMENTO       String?   @db.VarChar(3)
+  REG_FECHA_CREACION   DateTime? @db.DateTime
+  REG_USUARIO_CREACION String?   @db.VarChar(30)
+  GENERO               String?   @db.Char(1)
+
+  @@ignore
 }
 
 model MEDICO_ESPECIALIDAD {
@@ -3547,6 +3718,34 @@ model NOLABORABLE {
   FECHA  DateTime @id(clustered: false, map: "PK__NOLABORABLE__23F3538A") @db.DateTime
   NOMBRE String   @default(" ", map: "DF__NOLABORAB__NOMBR__220B0B18") @db.VarChar(50)
   ACTIVO Decimal  @default(1, map: "DF__NOLABORAB__ACTIV__22FF2F51") @db.Decimal(3, 0)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model NOTACREDITO {
+  NRONOTA       String   @db.VarChar(10)
+  CUENTAID      String   @db.VarChar(7)
+  FECHA_EMISION DateTime @db.DateTime
+  ESTADO        String   @db.VarChar(1)
+  SUBTOTAL      Decimal  @default(0, map: "DF__NOTACREDI__SUBTO__3D104026") @db.Decimal(18, 2)
+  IGV           Decimal  @default(0, map: "DF__NOTACREDITO__IGV__3E04645F") @db.Decimal(18, 2)
+  TOTAL         Decimal  @default(0, map: "DF__NOTACREDI__TOTAL__3EF88898") @db.Decimal(18, 2)
+  EMPRESASEGURO String   @db.Char(4)
+  REFERENCIA    String?  @db.VarChar(50)
+  NROFACTURA    String?  @db.VarChar(10)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model NOTACREDITODET {
+  NRONOTA  String  @db.VarChar(10)
+  CODIGO   String  @db.VarChar(10)
+  NOMBRE   String  @db.VarChar(100)
+  CANTIDAD Decimal @default(0, map: "DF__NOTACREDI__CANTI__3FECACD1") @db.Decimal(18, 0)
+  PRECIO   Decimal @default(0, map: "DF__NOTACREDI__PRECI__40E0D10A") @db.Decimal(18, 2)
+  TOTAL    Decimal @default(0, map: "DF__NOTACREDI__TOTAL__41D4F543") @db.Decimal(18, 2)
+
+  @@ignore
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -4043,6 +4242,7 @@ model PAIS {
   NOMBRE String? @db.VarChar(50)
   ACTIVO Decimal @default(1, map: "DF__PAIS__ACTIVO__23BE4960") @db.Decimal(3, 0)
   CODIGO String? @db.VarChar(3)
+  CDC    String? @db.Char(3)
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -4128,7 +4328,7 @@ model PATRON_LABO {
   ID_GPATRON        Int?
   UPS               String?            @db.VarChar(10)
   ORDEN             Int?
-  CPT_LABORATORIO   CPT_LABORATORIO[]  @ignore
+  CPT_LABORATORIO   CPT_LABORATORIO[]
   GRUPO_PATRON_LABO GRUPO_PATRON_LABO? @relation(fields: [ID_GPATRON], references: [ID_GPATRON], onDelete: NoAction, onUpdate: NoAction, map: "ID_GPATRON")
 }
 
@@ -4277,6 +4477,44 @@ model PRECIO {
   @@index([ITEM], map: "ITEM_IDX")
 }
 
+model PRECIO_22012025 {
+  IDRECORD                Decimal   @id(map: "PK__PRECIO_c__7A77D9E33A68DDA5") @db.Decimal(19, 0)
+  ITEM                    String    @db.Char(10)
+  FECHA                   DateTime  @default(now(), map: "DF__PRECIO_co__FECHA__3C512617") @db.DateTime
+  PRECIOA                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__3D454A50") @db.Decimal(18, 2)
+  PRECIOB                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__3E396E89") @db.Decimal(18, 2)
+  PRECIOC                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__3F2D92C2") @db.Decimal(18, 2)
+  PRECIOD                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__4021B6FB") @db.Decimal(18, 2)
+  PRECIOE                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__4115DB34") @db.Decimal(18, 2)
+  PRECIOF                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__4209FF6D") @db.Decimal(18, 2)
+  PRECIOG                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__42FE23A6") @db.Decimal(18, 2)
+  PRECIOH                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__43F247DF") @db.Decimal(18, 2)
+  PRECIOI                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__44E66C18") @db.Decimal(18, 2)
+  PRECIOJ                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__45DA9051") @db.Decimal(18, 2)
+  PRECIOK                 Decimal   @default(0, map: "DF__PRECIO_co__PRECI__46CEB48A") @db.Decimal(18, 2)
+  COSTO                   Decimal?  @default(0, map: "DF__PRECIO_co__COSTO__47C2D8C3") @db.Decimal(18, 6)
+  UTILIDAD                Decimal?  @default(0, map: "DF__PRECIO_co__UTILI__48B6FCFC") @db.Decimal(18, 2)
+  PRECIOPUB               Decimal?  @db.Decimal(18, 3)
+  DESCUENTO               Decimal?  @db.Decimal(18, 2)
+  PRECIO                  Decimal?  @db.Decimal(18, 3)
+  HORA                    String    @default(" ", map: "DF__PRECIO_cop__HORA__49AB2135") @db.Char(8)
+  PRECIOX                 Decimal?  @default(0, map: "DF__PRECIO_co__PRECI__4A9F456E") @db.Decimal(38, 3)
+  PROMEDIO                Decimal?  @db.Decimal(38, 3)
+  SYSINSERT               String?   @default(" ", map: "DF__PRECIO_co__SYSIN__4B9369A7") @db.VarChar(50)
+  SYSUPDATE               String?   @default(" ", map: "DF__PRECIO_co__SYSUP__4C878DE0") @db.VarChar(50)
+  INGRESOID               String?   @default(" ", map: "DF__PRECIO_co__INGRE__4D7BB219") @db.Char(8)
+  PRECIOP                 Decimal?  @default(0, map: "DF__PRECIO_co__PRECI__4E6FD652") @db.Decimal(18, 3)
+  USUARIO_MODIFICO        String?   @db.VarChar(50)
+  PC_MODIFICO             String?   @db.VarChar(50)
+  FECHA_MODIFICACION      DateTime? @db.DateTime
+  USUARIO_MODIFICO_SOAT   String?   @db.VarChar(50)
+  PC_MODIFICO_SOAT        String?   @db.VarChar(50)
+  FECHA_MODIFICACION_SOAT DateTime? @db.DateTime
+
+  @@index([FECHA], map: "FECHA_IDX_copy1")
+  @@index([ITEM], map: "ITEM_IDX_copy1")
+}
+
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model PRECIO_BITACORA {
   IDRECORD                Decimal   @db.Decimal(19, 0)
@@ -4354,10 +4592,11 @@ model PRECIO_BITACORA_20240620 {
 }
 
 model PRESENTACION {
-  PRESENTACION                         String  @id(clustered: false, map: "PK__PRESENTACION__49E3F248") @db.Char(10)
-  NOMBRE                               String  @default(" ", map: "DF__PRESENTAC__NOMBR__47FBA9D6") @db.VarChar(70)
-  ACTIVO                               Decimal @default(1, map: "DF__PRESENTAC__ACTIV__48EFCE0F") @db.Decimal(3, 0)
-  ITEM_ITEM_PRESENTACIONToPRESENTACION ITEM[]  @relation("ITEM_PRESENTACIONToPRESENTACION")
+  PRESENTACION                                     String       @id(clustered: false, map: "PK__PRESENTACION__49E3F248") @db.Char(10)
+  NOMBRE                                           String       @default(" ", map: "DF__PRESENTAC__NOMBR__47FBA9D6") @db.VarChar(70)
+  ACTIVO                                           Decimal      @default(1, map: "DF__PRESENTAC__ACTIV__48EFCE0F") @db.Decimal(3, 0)
+  ITEM_ITEM_PRESENTACIONToPRESENTACION             ITEM[]       @relation("ITEM_PRESENTACIONToPRESENTACION")
+  ITEM_copy1_ITEM_copy1_PRESENTACIONToPRESENTACION ITEM_copy1[] @relation("ITEM_copy1_PRESENTACIONToPRESENTACION")
 }
 
 model PRESTA {
@@ -4494,7 +4733,8 @@ model RAYOSX {
   ENTIDADSIS                                   String?          @default("0", map: "DF__RAYOSX__ENTIDADS__6899BCA9") @db.Char(10)
   ID_REFCON                                    Int?
   MOTIVO                                       String?          @db.VarChar(255)
-  RAYOSX_DETALLE_RAYOSX_DETALLE_RAYOSXToRAYOSX RAYOSX_DETALLE[] @relation("RAYOSX_DETALLE_RAYOSXToRAYOSX") @ignore
+  RECIBIDO_REFCON                              Int?
+  RAYOSX_DETALLE_RAYOSX_DETALLE_RAYOSXToRAYOSX RAYOSX_DETALLE[] @relation("RAYOSX_DETALLE_RAYOSXToRAYOSX")
 
   @@index([FECHA, UPS], map: "IX_RAYOSX_ups_fecha")
 }
@@ -5265,6 +5505,16 @@ model TABLA_VARIABLES {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model TABSITUACION {
+  VALORES    String? @db.NVarChar(4)
+  DESCRIPCIO String? @db.NVarChar(250)
+  CODIGO     Float?
+  EST        String? @db.NVarChar(1)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model TABSITUACION_31032025 {
   VALORES    String? @db.NVarChar(3)
   DESCRIPCIO String? @db.NVarChar(100)
   CODIGO     Float?
@@ -5309,7 +5559,7 @@ model TB_KIT_CONSUMO_VARIABLE {
   id_kit                      Int                           @id(map: "PK_KIT_CONSUMO_VARIABLE") @default(autoincrement())
   id_ups                      String                        @db.Char(6)
   id_cpt                      String                        @db.VarChar(5)
-  TB_KIT_CONSUMO_VARIABLE_DET TB_KIT_CONSUMO_VARIABLE_DET[] @ignore
+  TB_KIT_CONSUMO_VARIABLE_DET TB_KIT_CONSUMO_VARIABLE_DET[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.

@@ -1,460 +1,396 @@
 "use client"
-
+    
+import { DataTable } from "@/components/utils/data-table"
+import { DataProvider } from "@/components/utils/data-provider"
+import { EditDialog } from "@/components/edit-dialog"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { ColumnDef } from "@tanstack/react-table"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, FileSpreadsheet, Plus, Pencil, Trash, Search, RefreshCw } from "lucide-react"
-import Link from "next/link"
-
-// Tipos
+    
 interface Consultorio {
-  id: string
-  nombre: string
-  abreviatura: string
-  especialidad: string
-  tipo: string
-  rol: string
-  muestraRol: string
-  cc1: string
-  cc2: string
-  cc3: string
-  activo: boolean
-  orden: number
-  numero: string
-  cupo: number
-  codEsp: string
-  nomEsp: string
-  hisEspec: string
-}
+    CONSULTORIO: string
+    NOMBRE: string
+    ABREVIATURA: string
+    ESPECIALIDAD : string
+    TIPO: string
+    ROL: "1",
+    MUESTRAROL: "0",
+    CC1: "",
+    CC2: "",
+    CC3: "",
+    ACTIVO: number,
+    ORDEN: number,
+    NUMERO: string,
+    CUPO: number,
+    CODESP: string,
+    NOMEESP: string,
+    HISESPEC: string,
+    }
+    
+    const defaultValues: Partial<Consultorio> = {
+      CONSULTORIO: "",
+      NOMBRE: "",
+      ABREVIATURA: "",
+      ESPECIALIDAD: "",
+      TIPO: "",
+      ROL: "1",
+      MUESTRAROL: "0",
+      CC1: "",
+      CC2: "",
+      CC3: "",
+      ACTIVO: 1,
+      ORDEN: 0,
+      NUMERO: "",
+      CUPO: 0,
+      CODESP: "",
+      NOMEESP: "",
+      HISESPEC: ""
+    }
+    
+const columns: ColumnDef<Consultorio, unknown>[] = [
+  {
+    accessorKey: "CONSULTORIO",
+    header: "CÓDIGO"
+  },
+  {
+    accessorKey: "NOMBRE",
+    header: "NOMBRE"
+  },
+  {
+    accessorKey: "ABREVIATURA",
+    header: "ABREVIATURA"
+  },
+  {
+    accessorKey: "ESPECIALIDAD",
+    header: "ESPECIALIDAD"
+  },
+  {
+    accessorKey: "TIPO",
+    header: "TIPO"
+  },
+  { accessorKey: "ROL", header: "ROL" },
+  { accessorKey: "MUESTRAROL", header: "MUESTRAR ROL" },
+  { accessorKey: "CC1", header: "CC1" },
+  { accessorKey: "CC2", header: "CC2" },
+  { accessorKey: "CC3", header: "CC3" },
+  {
+    accessorKey: "ACTIVO",
+    header: "ACTIVO",
+    cell: ({ row }) => (
+      <span>{Number(row.getValue("ACTIVO")) === 1 ? "Sí" : "No"}</span>
+    )
+  },
+  {
+    accessorKey: "ORDEN",
+    header: "ORDEN"
+  },
+  {
+    accessorKey: "NUMERO",
+    header: "NUMERO"
+  },
+  {
+    accessorKey: "CUPO",
+    header: "CUPO"
+  },
+  {
+    accessorKey: "CODESP",
+    header: "CODESP"
+  },
+  {
+    accessorKey: "NOMEESP",
+    header: "NOMEESP"
+  },
+  {
+    accessorKey: "HISESPEC",
+    header: "HISESPEC"
+  }
+]
 
 export default function ConsultoriosPage() {
-  // Estado para los consultorios
-  const [consultorios, setConsultorios] = useState<Consultorio[]>([
-    {
-      id: "10",
-      nombre: "MEDICINA",
-      abreviatura: "MEDICINA",
-      especialidad: "0",
-      tipo: "S",
-      rol: "1",
-      muestraRol: "0",
-      cc1: "",
-      cc2: "",
-      cc3: "",
-      activo: true,
-      orden: 1,
-      numero: "192",
-      cupo: 20,
-      codEsp: "10",
-      nomEsp: "MEDICINA",
-      hisEspec: "1",
-    },
-    {
-      id: "1011",
-      nombre: "MEDICINA INTERNA 1",
-      abreviatura: "MEDINTER1",
-      especialidad: "0001",
-      tipo: "C",
-      rol: "0",
-      muestraRol: "1",
-      cc1: "",
-      cc2: "",
-      cc3: "",
-      activo: true,
-      orden: 1,
-      numero: "01",
-      cupo: 20,
-      codEsp: "10",
-      nomEsp: "MEDICINA",
-      hisEspec: "1",
-    },
-    {
-      id: "1012",
-      nombre: "MEDICINA INTERNA 2",
-      abreviatura: "MEDINTER2",
-      especialidad: "0001",
-      tipo: "C",
-      rol: "0",
-      muestraRol: "1",
-      cc1: "",
-      cc2: "",
-      cc3: "",
-      activo: true,
-      orden: 1,
-      numero: "29",
-      cupo: 20,
-      codEsp: "10",
-      nomEsp: "MEDICINA",
-      hisEspec: "1",
-    },
-    {
-      id: "20",
-      nombre: "CIRUGIA",
-      abreviatura: "CIRUGIA",
-      especialidad: "0",
-      tipo: "S",
-      rol: "1",
-      muestraRol: "0",
-      cc1: "",
-      cc2: "",
-      cc3: "",
-      activo: true,
-      orden: 1,
-      numero: "193",
-      cupo: 0,
-      codEsp: "20",
-      nomEsp: "CIRUGIA",
-      hisEspec: "2",
-    },
-    {
-      id: "2026",
-      nombre: "CIRUGIA PEDIATRICA",
-      abreviatura: "CIRPED",
-      especialidad: "0011",
-      tipo: "C",
-      rol: "0",
-      muestraRol: "1",
-      cc1: "",
-      cc2: "",
-      cc3: "",
-      activo: true,
-      orden: 1,
-      numero: "92",
-      cupo: 16,
-      codEsp: "20",
-      nomEsp: "CIRUGIA",
-      hisEspec: "2",
-    },
-  ])
-
-  // Estado para el filtro de búsqueda
-  const [searchTerm, setSearchTerm] = useState("")
-
-  // Estado para el consultorio seleccionado para editar
-  const [selectedConsultorio, setSelectedConsultorio] = useState<Consultorio | null>(null)
-
-  // Estado para el diálogo
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogMode, setDialogMode] = useState<"add" | "edit">("add")
-
-  // Filtrar consultorios según el término de búsqueda
-  const filteredConsultorios = consultorios.filter(
-    (consultorio) =>
-      consultorio.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      consultorio.abreviatura.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  // Función para abrir el diálogo de agregar
-  const handleAddClick = () => {
-    setDialogMode("add")
-    setSelectedConsultorio({
-      id: "",
-      nombre: "",
-      abreviatura: "",
-      especialidad: "0",
-      tipo: "C",
-      rol: "0",
-      muestraRol: "0",
-      cc1: "",
-      cc2: "",
-      cc3: "",
-      activo: true,
-      orden: 1,
-      numero: "",
-      cupo: 0,
-      codEsp: "",
-      nomEsp: "",
-      hisEspec: "1",
-    })
-    setDialogOpen(true)
-  }
-
-  // Función para abrir el diálogo de edición
-  const handleEditClick = (consultorio: Consultorio) => {
-    setDialogMode("edit")
-    setSelectedConsultorio(consultorio)
-    setDialogOpen(true)
-  }
-
-  // Función para eliminar un consultorio
-  const handleDeleteClick = (id: string) => {
-    if (window.confirm("¿Está seguro que desea eliminar este consultorio?")) {
-      setConsultorios(consultorios.filter((c) => c.id !== id))
-    }
-  }
-
-  // Función para guardar un consultorio (agregar o editar)
-  const handleSaveConsultorio = () => {
-    if (!selectedConsultorio) return
-
-    if (dialogMode === "add") {
-      // Generar un ID único
-      const newId = Math.max(...consultorios.map((c) => Number.parseInt(c.id)), 0) + 1
-      setConsultorios([...consultorios, { ...selectedConsultorio, id: newId.toString() }])
-    } else {
-      setConsultorios(consultorios.map((c) => (c.id === selectedConsultorio.id ? selectedConsultorio : c)))
-    }
-
-    setDialogOpen(false)
-  }
-
-  // Función para exportar a Excel
-  const handleExportExcel = () => {
-    alert("Exportando a Excel...")
-  }
+  const [filtroTipo, setFiltroTipo] = useState<string | null>(null)
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Consultorios</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/tablas">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Regresar
-            </Button>
-          </Link>
-          <Button variant="outline" size="sm" onClick={handleExportExcel}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Exportar Excel
-          </Button>
-          <Button size="sm" onClick={handleAddClick}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo
-          </Button>
-        </div>
-      </div>
+    <DataProvider<Consultorio>
+      apiEndpoint="consultorios"
+      idField="CONSULTORIO"
+      defaultValues={defaultValues}
+      extraParams={{
+        tipo: filtroTipo
+      }}
+    >
+        {({
+          data,
+          loading,
+          totalItems,
+          currentPage,
+          setCurrentPage,
+          pageSize,
+          setPageSize,
+          searchTerm,
+          setSearchTerm,
+          filterActive,
+          setFilterActive,
+          selectedItems,
+          setSelectedItems,
+          selectAll,
+          handleSelectAll,
+          handleRefresh,
+          handleNew,
+          handleEdit,
+          handleDelete,
+          handleSaveItem,
+          confirmDelete,
+          editDialogOpen,
+          setEditDialogOpen,
+          confirmDialogOpen,
+          setConfirmDialogOpen,
+          loadData
+        }) => { const columns: ColumnDef<Consultorio, unknown>[] = [
+                  {
+                    accessorKey: "CONSULTORIO",
+                    header: "CÓDIGO"
+                  },
+                  {
+                    accessorKey: "NOMBRE",
+                    header: "NOMBRE"
+                  },
+                  {
+                    accessorKey: "ABREVIATURA",
+                    header: "ABREVIATURA"
+                  },
+                  {
+                    accessorKey: "ESPECIALIDAD",
+                    header: "ESPECIALIDAD"
+                  },
+                  {
+                    accessorKey: "TIPO",
+                    header: "TIPO"
+                  },
+                  
+                ]
+                return (
+                          <>
+                            <div className="mb-4 p-4 border rounded-md bg-gray-50">
+                              <h3 className="text-lg font-semibold mb-2">Filtros</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                                  <select
+                                    id="tipo"
+                                    className="w-full p-2 border border-gray-300 rounded-md"
+                                    value={filtroTipo || 'all'}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setFiltroTipo(value === 'all' ? null : value);
+                                      loadData();
+                                    }}
+                                  >
+                                    <option value="all">Todos</option>
+                                    <option value="0">0 - Sin especificar</option>
+                                    <option value="9">9 - Especial</option>
+                                    <option value="C">C - Consultorio</option>
+                                    <option value="D">D - Diagnóstico</option>
+                                    <option value="E">E - Emergencia</option>
+                                    <option value="H">H - Hospitalización</option>
+                                    <option value="O">O - Otros</option>
+                                    <option value="S">S - Servicio</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <DataTable<Consultorio>
+                              title="Tabla de Consultorios - Especialidad"
+                              columns={columns}
+                              data={data}
+                              loading={loading}
+                              totalItems={totalItems}
+                              currentPage={currentPage}
+                              onPageChange={setCurrentPage}
+                              pageSize={pageSize}
+                              onPageSizeChange={setPageSize}
+                              searchTerm={searchTerm}
+                              setSearchTerm={setSearchTerm}
+                              filterActive={filterActive}
+                              setFilterActive={setFilterActive}
+                              selectedRows={selectedItems}
+                              setSelectedRows={setSelectedItems}
+                              selectAll={selectAll}
+                              onSelectAll={handleSelectAll}
+                              idField="CONSULTORIO"
+                              onEdit={undefined}
+                              onDelete={undefined}
+                              onNew={undefined}
+                              onRefresh={handleRefresh}
+                              backHref="/dashboard/tablas"
+                              printConfig={{
+                                title: "Reporte de Consultorios",
+                                data: data,
+                                columns: [
+                                  { key: "CONSULTORIO", header: "CÓDIGO" },
+                                  { key: "NOMBRE", header: "NOMBRE" },
+                                  { key: "ABREVIATURA", header: "ABREVIATURA" },
+                                  { key: "ESPECIALIDAD", header: "ESPECIALIDAD" },
+                                  { key: "TIPO", header: "TIPO" },
+                                  { key: "MUESTRAROL", header: "MUESTRAR ROL" },
+                                  { key: "CC1", header: "CC1" },
+                                  { key: "CC2", header: "CC2" },
+                                  { key: "CC3", header: "CC3" },
+                                  { key: "ACTIVO", header: "ACTIVO" },
+                                  { key: "ORDEN", header: "ORDEN" },
+                                  { key: "NUMERO", header: "NUMERO" },
+                                  { key: "CUPO", header: "CUPO" },
+                                  { key: "CODESP", header: "CODESP" },
+                                  { key: "NOMEESP", header: "NOMEESP" },
+                                  { key: "HISESPEC", header: "HISESPEC" }
+                                ]
+                              }}
+                              exportConfig={{
+                                filename: "consultorios",
+                                data: data,
+                                columns: [
+                                  { key: "CONSULTORIO", header: "CÓDIGO" },
+                                  { key: "NOMBRE", header: "NOMBRE" },
+                                  { key: "ABREVIATURA", header: "ABREVIATURA" },
+                                  { key: "ESPECIALIDAD", header: "ESPECIALIDAD" },
+                                  { key: "TIPO", header: "TIPO" },
+                                  { key: "ROL", header: "ROL" },
+                                  { key: "MUESTRAROL", header: "MUESTRAR ROL" },
+                                  { key: "CC1", header: "CC1" },
+                                  { key: "CC2", header: "CC2" },
+                                  { key: "CC3", header: "CC3" },
+                                  { key: "ACTIVO", header: "ACTIVO" },
+                                  { key: "ORDEN", header: "ORDEN" },
+                                  { key: "NUMERO", header: "NUMERO" },
+                                  { key: "CUPO", header: "CUPO" },
+                                  { key: "CODESP", header: "CODESP" },
+                                  { key: "NOMEESP", header: "NOMEESP" },
+                                  { key: "HISESPEC", header: "HISESPEC" }
+                                ]
+                              }}
+                            />
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre o abreviatura..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" size="icon" onClick={() => setSearchTerm("")}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
+            <EditDialog
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+              title={selectedItems.length === 1 ? "Editar Consultorio" : "Nuevo Consultorio"}
+              defaultValues={defaultValues}
+              selectedItem={selectedItems.length === 1 ? selectedItems[0] : null}
+              onSave={handleSaveItem}
+              fields={[
+                { name: "CONSULTORIO", label: "Código", type: "text", required: true, readOnly: selectedItems.length === 1 },
+                { name: "NOMBRE", label: "Nombre", type: "text", required: true },
+                { 
+                  name: "ABREVIATURA", 
+                  label: "Abreviatura", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "ESPECIALIDAD", 
+                  label: "Especialidad", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "TIPO", 
+                  label: "Tipo", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "ROL", 
+                  label: "Rol", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "MUESTRAROL", 
+                  label: "Muestra Rol", 
+                  type: "select", 
+                  options: [
+                    { value: "1", label: "Sí" },
+                    { value: "0", label: "No" }
+                  ]
+                },
+                { 
+                  name: "CC1", 
+                  label: "CC1", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "CC2", 
+                  label: "CC2", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "CC3", 
+                  label: "CC3", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "ACTIVO", 
+                  label: "Activo", 
+                  type: "select", 
+                  options: [
+                    { value: "1", label: "Sí" },
+                    { value: "0", label: "No" }
+                  ]
+                },
+                { 
+                  name: "ORDEN", 
+                  label: "Orden", 
+                  type: "number", 
+                  required: true 
+                },
+                { 
+                  name: "NUMERO", 
+                  label: "Número", 
+                  type: "number", 
+                  required: true 
+                },
+                { 
+                  name: "CUPO", 
+                  label: "Cupo", 
+                  type: "number", 
+                  required: true 
+                },
+                { 
+                  name: "CODESP", 
+                  label: "CodeSP", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "NOMEESP", 
+                  label: "NomeEsp", 
+                  type: "text", 
+                  required: true 
+                },
+                { 
+                  name: "HISESPEC", 
+                  label: "HisEspec", 
+                  type: "text", 
+                  required: true 
+                },
+                
+              ]}
+            />
 
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">ID</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Abreviatura</TableHead>
-              <TableHead>Especialidad</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Activo</TableHead>
-              <TableHead>Orden</TableHead>
-              <TableHead>Número</TableHead>
-              <TableHead>Cupo</TableHead>
-              <TableHead>Cod. Esp.</TableHead>
-              <TableHead>Nom. Esp.</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredConsultorios.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={13} className="text-center py-4">
-                  No se encontraron consultorios
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredConsultorios.map((consultorio) => (
-                <TableRow key={consultorio.id}>
-                  <TableCell>{consultorio.id}</TableCell>
-                  <TableCell>{consultorio.nombre}</TableCell>
-                  <TableCell>{consultorio.abreviatura}</TableCell>
-                  <TableCell>{consultorio.especialidad}</TableCell>
-                  <TableCell>{consultorio.tipo}</TableCell>
-                  <TableCell>{consultorio.rol}</TableCell>
-                  <TableCell>{consultorio.activo ? "Sí" : "No"}</TableCell>
-                  <TableCell>{consultorio.orden}</TableCell>
-                  <TableCell>{consultorio.numero}</TableCell>
-                  <TableCell>{consultorio.cupo}</TableCell>
-                  <TableCell>{consultorio.codEsp}</TableCell>
-                  <TableCell>{consultorio.nomEsp}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(consultorio)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(consultorio.id)}>
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{dialogMode === "add" ? "Agregar Consultorio" : "Editar Consultorio"}</DialogTitle>
-          </DialogHeader>
-          {selectedConsultorio && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre</Label>
-                <Input
-                  id="nombre"
-                  value={selectedConsultorio.nombre}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, nombre: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="abreviatura">Abreviatura</Label>
-                <Input
-                  id="abreviatura"
-                  value={selectedConsultorio.abreviatura}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, abreviatura: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="especialidad">Especialidad</Label>
-                <Input
-                  id="especialidad"
-                  value={selectedConsultorio.especialidad}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, especialidad: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo</Label>
-                <Select
-                  value={selectedConsultorio.tipo}
-                  onValueChange={(value) => setSelectedConsultorio({ ...selectedConsultorio, tipo: value })}
-                >
-                  <SelectTrigger id="tipo">
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="S">S</SelectItem>
-                    <SelectItem value="C">C</SelectItem>
-                    <SelectItem value="E">E</SelectItem>
-                    <SelectItem value="H">H</SelectItem>
-                    <SelectItem value="O">O</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rol">Rol</Label>
-                <Select
-                  value={selectedConsultorio.rol}
-                  onValueChange={(value) => setSelectedConsultorio({ ...selectedConsultorio, rol: value })}
-                >
-                  <SelectTrigger id="rol">
-                    <SelectValue placeholder="Seleccionar rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">0</SelectItem>
-                    <SelectItem value="1">1</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="activo">Activo</Label>
-                <Select
-                  value={selectedConsultorio.activo ? "true" : "false"}
-                  onValueChange={(value) =>
-                    setSelectedConsultorio({
-                      ...selectedConsultorio,
-                      activo: value === "true",
-                    })
-                  }
-                >
-                  <SelectTrigger id="activo">
-                    <SelectValue placeholder="Seleccionar estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Sí</SelectItem>
-                    <SelectItem value="false">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="orden">Orden</Label>
-                <Input
-                  id="orden"
-                  type="number"
-                  value={selectedConsultorio.orden}
-                  onChange={(e) =>
-                    setSelectedConsultorio({
-                      ...selectedConsultorio,
-                      orden: Number.parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="numero">Número</Label>
-                <Input
-                  id="numero"
-                  value={selectedConsultorio.numero}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, numero: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cupo">Cupo</Label>
-                <Input
-                  id="cupo"
-                  type="number"
-                  value={selectedConsultorio.cupo}
-                  onChange={(e) =>
-                    setSelectedConsultorio({
-                      ...selectedConsultorio,
-                      cupo: Number.parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="codEsp">Código Especialidad</Label>
-                <Input
-                  id="codEsp"
-                  value={selectedConsultorio.codEsp}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, codEsp: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nomEsp">Nombre Especialidad</Label>
-                <Input
-                  id="nomEsp"
-                  value={selectedConsultorio.nomEsp}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, nomEsp: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hisEspec">HIS Espec</Label>
-                <Input
-                  id="hisEspec"
-                  value={selectedConsultorio.hisEspec}
-                  onChange={(e) => setSelectedConsultorio({ ...selectedConsultorio, hisEspec: e.target.value })}
-                />
-              </div>
-              <div className="col-span-2 flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSaveConsultorio}>Guardar</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+            <ConfirmDialog
+              open={confirmDialogOpen}
+              onOpenChange={setConfirmDialogOpen}
+              onConfirm={confirmDelete}
+              title="¿Está seguro de eliminar?"
+              description={`Está a punto de eliminar ${selectedItems.length} ${selectedItems.length === 1 ? "almacén" : "almacenes"}. Esta acción no se puede deshacer.`}
+              confirmText="Eliminar"
+            />
+          </>
+        )
+      }}
+    </DataProvider>
   )
 }
-

@@ -1,38 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TipoAtencionService } from '@/services/tipo-atencion.service'
+import { Prisma } from '@prisma/client'
 
 const tipoAtencionService = new TipoAtencionService()
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search')
+    const { searchParams } = new URL(req.url)
+    const search = searchParams.get('search') || ''
     const active = searchParams.get('active')
-
-    // Construir el filtro de búsqueda
-    let whereClause: any = {}
+    
+    let where: Prisma.TIPO_ATENCIONWhereInput = {}
     
     if (search) {
-      whereClause.OR = [
-        { TIPO_ATENCION: { contains: search, mode: 'insensitive' } },
-        { NOMBRE: { contains: search, mode: 'insensitive' } }
-      ]
+      where = {
+        OR: [
+          { TIPO_ATENCION: { contains: search } },
+          { NOMBRE: { contains: search } }
+        ]
+      }
     }
     
     if (active !== null && active !== undefined) {
-      whereClause.ACTIVO = Number(active)
+      where = {
+        ...where,
+        ACTIVO: active
+      }
     }
-
-    const count = await tipoAtencionService.count({
-      where: whereClause
-    })
-
+    
+    const count = await tipoAtencionService.count({ where })
     return NextResponse.json({ count })
-  } catch (error: any) {
-    console.error('Error en GET /api/tablas/tipo-atencion/count:', error)
-    return NextResponse.json(
-      { error: 'Error al contar los tipos de atención', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    console.error('Error counting tipo de atenciones:', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

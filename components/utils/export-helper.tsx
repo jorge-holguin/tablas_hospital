@@ -3,7 +3,7 @@ import React from 'react'
 interface Column {
   key: string
   header: string
-  format?: (value: any) => string
+  format?: (value: any, row?: Record<string, any>) => string
 }
 
 interface ExportHelperProps {
@@ -21,7 +21,7 @@ export const exportToCSV = ({ filename, data, columns }: ExportHelperProps) => {
     const csvData = data.map(item => 
       columns.map(col => {
         const value = item[col.key]
-        return col.format ? col.format(value) : value !== undefined && value !== null ? value : ''
+        return col.format ? col.format(value, item) : value !== undefined && value !== null ? value : ''
       })
     )
     

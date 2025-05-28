@@ -11,7 +11,7 @@ export async function GET(
   try {
     const medico = await medicoService.findOne(params.id)
     if (!medico) {
-      return NextResponse.json({ error: 'Medico not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Medico no encontrado' }, { status: 404 })
     }
     return NextResponse.json(medico)
   } catch (error) {

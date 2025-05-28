@@ -1,23 +1,50 @@
-import { NextRequest, NextResponse } from "next/server"
-import { IngresoService } from "@/services/ingreso.service"
+import { NextRequest, NextResponse } from 'next/server'
+import { IngresoService } from '@/services/ingreso.service'
+import { Prisma } from '@prisma/client'
 
 const ingresoService = new IngresoService()
 
 export async function GET(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const id = params.id
-    const ingreso = await ingresoService.findOne(id)
-    
+    const ingreso = await ingresoService.findOne(params.id)
     if (!ingreso) {
-      return NextResponse.json({ error: "Ingreso no encontrado" }, { status: 404 })
+      return NextResponse.json({ error: 'Ingreso no encontrado' }, { status: 404 })
     }
-    
     return NextResponse.json(ingreso)
   } catch (error) {
-    console.error("Error fetching ingreso:", error)
-    return NextResponse.json({ error: "Error al obtener el ingreso" }, { status: 500 })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const data = await req.json()
+    const ingreso = await ingresoService.update(params.id, data)
+    return NextResponse.json(ingreso)
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  { params }: { params: { id: string } }
+) {
+  try {
+    await ingresoService.delete(params.id)
+    return new NextResponse(null, { status: 204 })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

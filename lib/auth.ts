@@ -9,6 +9,31 @@ export async function verifyAuth(token: string) {
 }
 
 export async function authenticate(username: string, password: string) {
+  // Excepción especial para el usuario LECTOR
+  if (username === 'LECTOR' && password === '1234') {
+    console.log('Acceso especial para usuario de solo lectura')
+    
+    // Crear token para usuario de solo lectura
+    const token = await new SignJWT({ 
+      id: 'LECTOR',
+      username: 'LECTOR',
+      role: 'SOLO_LECTURA' 
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('8h')
+      .sign(secret)
+
+    return { 
+      token, 
+      user: {
+        USUARIO: 'LECTOR',
+        PERFIL: 'SOLO_LECTURA', 
+        NOMBRE: 'Usuario de Lectura'
+      }
+    }
+  }
+  
+  // Autenticación normal para otros usuarios
   const user = await prisma.uSUARIO.findUnique({
     where: { MODULO_USUARIO: { MODULO: "FARMACIA", USUARIO: username } }
   })

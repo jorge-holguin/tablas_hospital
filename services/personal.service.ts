@@ -41,4 +41,13 @@ export class PersonalService {
       where: { PERSONAL: id },
     })
   }
+
+  async count(params: {
+    where?: Prisma.PERSONAL_BORRARWhereInput
+  }) {
+    const { where } = params
+    return prisma.pERSONAL_BORRAR.count({
+      where,
+    })
+  }
 }

@@ -12,15 +12,24 @@ interface FieldConfig {
   name: string
   label: string
   type: 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox'
+  customType?: 'combobox' | string
   required?: boolean
   readOnly?: boolean
+  disabled?: boolean
   maxLength?: number
+  placeholder?: string
+  description?: string
   options?: { value: string; label: string }[]
-  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: any, setFormData: React.Dispatch<React.SetStateAction<any>>) => void
+  onChange?: (value: any, setFieldValue: (field: string, value: any) => void, formData?: any) => void
   transform?: {
     input: (value: any) => any
     output: (value: any) => any
   }
+  // Propiedades para combobox
+  apiEndpoint?: string | ((formValues: Record<string, any>) => string)
+  valueField?: string
+  labelField?: string
+  descriptionField?: string
 }
 
 interface EditDialogProps {
@@ -48,6 +57,7 @@ export function EditDialog({
 }: EditDialogProps) {
   const [formData, setFormData] = useState<any>({})
 
+  // Inicializar formData solo cuando cambia selectedItem o data
   useEffect(() => {
     if (selectedItem && data) {
       const selectedData = data.find((item: any) => item[Object.keys(item)[0]] === selectedItem)
@@ -55,7 +65,9 @@ export function EditDialog({
     } else {
       setFormData(defaultValues)
     }
-  }, [selectedItem, data, defaultValues])
+    // Eliminamos defaultValues de las dependencias para evitar bucles infinitos
+    // ya que defaultValues es un objeto que puede cambiar en cada renderizado
+  }, [selectedItem, data])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,17 +89,26 @@ export function EditDialog({
             <Label htmlFor={field.name} className="text-right">
               {field.label}
             </Label>
-            <div className="col-span-3 flex items-center space-x-2">
-              <Checkbox 
-                id={field.name}
-                checked={Boolean(value)}
-                onCheckedChange={(checked) => {
-                  const newValue = checked ? true : false
-                  const outputValue = field.transform?.output ? field.transform.output(newValue) : newValue
-                  setFormData({ ...formData, [field.name]: outputValue })
-                }}
-                disabled={field.readOnly}
-              />
+            <div className="col-span-3 space-y-1">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id={field.name} 
+                  checked={value === 1 || value === '1' || value === true} 
+                  onCheckedChange={(checked) => {
+                    const newValue = checked ? 1 : 0
+                    field.onChange 
+                      ? field.onChange(newValue, (fieldName, fieldValue) => setFormData({ ...formData, [fieldName]: fieldValue }), formData) 
+                      : setFormData({ ...formData, [field.name]: newValue})
+                  }}
+                  disabled={field.readOnly || field.disabled}
+                />
+                <Label htmlFor={field.name}>
+                  {value === 1 || value === '1' || value === true ? "Sí" : "No"}
+                </Label>
+              </div>
+              {field.description && (
+                <p className="text-xs text-muted-foreground">{field.description}</p>
+              )}
             </div>
           </div>
         )
@@ -98,16 +119,16 @@ export function EditDialog({
             <Label htmlFor={field.name} className="text-right">
               {field.label}
             </Label>
-            <div className="col-span-3">
+            <div className="col-span-3 space-y-1">
               <Select 
                 value={String(value)} 
                 onValueChange={(val) => field.onChange 
                   ? field.onChange({target: {value: val}} as React.ChangeEvent<HTMLInputElement>, formData, setFormData) 
                   : setFormData({ ...formData, [field.name]: val})}
-                disabled={field.readOnly}
+                disabled={field.readOnly || field.disabled}
               >
                 <SelectTrigger id={field.name}>
-                  <SelectValue placeholder={`Seleccione ${field.label}`} />
+                  <SelectValue placeholder={field.placeholder || `Seleccione ${field.label}`} />
                 </SelectTrigger>
                 <SelectContent>
                   {field.options?.map(option => (
@@ -117,6 +138,9 @@ export function EditDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {field.description && (
+                <p className="text-xs text-muted-foreground">{field.description}</p>
+              )}
             </div>
           </div>
         )
@@ -127,15 +151,22 @@ export function EditDialog({
             <Label htmlFor={field.name} className="text-right">
               {field.label}
             </Label>
-            <Input
-              id={field.name}
-              type="number"
-              value={value}
-              onChange={(e) => field.onChange ? field.onChange(e, formData, setFormData) : setFormData({ ...formData, [field.name]: e.target.value})}
-              className="col-span-3"
-              required={field.required}
-              readOnly={field.readOnly}
-            />
+            <div className="col-span-3 space-y-1">
+              <Input
+                id={field.name}
+                type="number"
+                value={value}
+                onChange={(e) => field.onChange ? field.onChange(e.target.value, (fieldName, fieldValue) => setFormData({ ...formData, [fieldName]: fieldValue }), formData) : setFormData({ ...formData, [field.name]: e.target.value})}
+                className="w-full"
+                required={field.required}
+                readOnly={field.readOnly}
+                disabled={field.disabled}
+                placeholder={field.placeholder}
+              />
+              {field.description && (
+                <p className="text-xs text-muted-foreground">{field.description}</p>
+              )}
+            </div>
           </div>
         )
       
@@ -145,15 +176,22 @@ export function EditDialog({
             <Label htmlFor={field.name} className="text-right">
               {field.label}
             </Label>
-            <Input
-              id={field.name}
-              value={value}
-              onChange={(e) => field.onChange ? field.onChange(e, formData, setFormData) : setFormData({ ...formData, [field.name]: e.target.value})}
-              className="col-span-3"
-              required={field.required}
-              readOnly={field.readOnly}
-              maxLength={field.maxLength}
-            />
+            <div className="col-span-3 space-y-1">
+              <Input
+                id={field.name}
+                value={value}
+                onChange={(e) => field.onChange ? field.onChange(e.target.value, (fieldName, fieldValue) => setFormData({ ...formData, [fieldName]: fieldValue }), formData) : setFormData({ ...formData, [field.name]: e.target.value})}
+                className="w-full"
+                required={field.required}
+                readOnly={field.readOnly}
+                disabled={field.disabled}
+                maxLength={field.maxLength}
+                placeholder={field.placeholder}
+              />
+              {field.description && (
+                <p className="text-xs text-muted-foreground">{field.description}</p>
+              )}
+            </div>
           </div>
         )
     }
