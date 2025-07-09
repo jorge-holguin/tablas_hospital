@@ -159,6 +159,10 @@ export default function ConsultoriosPage() {
                     header: "ABREVIATURA"
                   },
                   {
+                    accessorKey: "NUMERO",
+                    header: "CODIGO EN EMERGENCIA"
+                  },
+                  {
                     accessorKey: "ESPECIALIDAD",
                     header: "ESPECIALIDAD"
                   },
@@ -238,7 +242,7 @@ export default function ConsultoriosPage() {
                                   { key: "CC3", header: "CC3" },
                                   { key: "ACTIVO", header: "ACTIVO" },
                                   { key: "ORDEN", header: "ORDEN" },
-                                  { key: "NUMERO", header: "NUMERO" },
+                                  { key: "NUMERO", header: "EMERGENCIA" },
                                   { key: "CUPO", header: "CUPO" },
                                   { key: "CODESP", header: "CODESP" },
                                   { key: "NOMEESP", header: "NOMEESP" },

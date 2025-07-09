@@ -50,17 +50,24 @@ export class ConsultorioService {
           
           for (const condition of where.OR) {
             // Buscar por código CONSULTORIO
-            if (condition.CONSULTORIO?.contains) {
+            if (condition.CONSULTORIO && typeof condition.CONSULTORIO === 'object' && 'contains' in condition.CONSULTORIO && condition.CONSULTORIO.contains) {
               // SQL Server 2008 compatible LIKE syntax - usando concatenación directa
-              const searchTerm = condition.CONSULTORIO.contains.replace(/'/g, "''"); // Escapar comillas simples
+              const searchTerm = String(condition.CONSULTORIO.contains).replace(/'/g, "''"); // Escapar comillas simples
               orConditions.push(`CONSULTORIO LIKE N'%${searchTerm}%'`);
             }
             
             // Buscar por NOMBRE
-            if (condition.NOMBRE?.contains) {
+            if (condition.NOMBRE && typeof condition.NOMBRE === 'object' && 'contains' in condition.NOMBRE && condition.NOMBRE.contains) {
               // SQL Server 2008 compatible LIKE syntax - usando concatenación directa
-              const searchTerm = condition.NOMBRE.contains.replace(/'/g, "''"); // Escapar comillas simples
+              const searchTerm = String(condition.NOMBRE.contains).replace(/'/g, "''"); // Escapar comillas simples
               orConditions.push(`NOMBRE LIKE N'%${searchTerm}%'`);
+            }
+            
+            // Buscar por NUMERO
+            if (condition.NUMERO && typeof condition.NUMERO === 'object' && 'contains' in condition.NUMERO && condition.NUMERO.contains) {
+              // SQL Server 2008 compatible LIKE syntax - usando concatenación directa
+              const searchTerm = String(condition.NUMERO.contains).replace(/'/g, "''"); // Escapar comillas simples
+              orConditions.push(`NUMERO LIKE N'%${searchTerm}%'`);
             }
           }
           

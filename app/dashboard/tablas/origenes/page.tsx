@@ -45,6 +45,29 @@ export default function OrigenesPage() {
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [editingItem, setEditingItem] = useState<Origen | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  
+  // Inicializar el formulario a nivel de componente
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaultValues as any
+  })
+  
+  // Actualizar el formulario cuando cambia el item en edición
+  useEffect(() => {
+    if (editingItem) {
+      form.reset(editingItem as any)
+    }
+  }, [editingItem, form])
+  
+  // Resetear el estado de edición cuando se cierra el diálogo
+  useEffect(() => {
+    if (!editDialogOpen) {
+      setIsEditing(false)
+      setEditingItem(null)
+      form.reset(defaultValues as any)
+    }
+  }, [editDialogOpen, form])
 
   return (
     <DataProvider<Origen>
@@ -80,11 +103,11 @@ export default function OrigenesPage() {
         setConfirmDialogOpen,
         loadData
       }) => {
-        // Configuración del formulario
-        const form = useForm<z.infer<typeof formSchema>>({
-          resolver: zodResolver(formSchema),
-          defaultValues: editingItem || defaultValues as any
-        })
+        
+        // Sincronizar el estado del diálogo de edición
+        useEffect(() => {
+          setEditDialogOpen(editDialogOpen);
+        }, [editDialogOpen]);
         
         // Manejar la edición de un item
         const handleItemEdit = async (id: string) => {
@@ -105,22 +128,6 @@ export default function OrigenesPage() {
             })
           }
         }
-        
-        // Actualizar el formulario cuando cambia el item en edición
-        useEffect(() => {
-          if (editingItem && !isEditing) {
-            form.reset(editingItem as any)
-            setIsEditing(true)
-          }
-        }, [editingItem, isEditing, form])
-
-        // Resetear el estado de edición cuando se cierra el diálogo
-        useEffect(() => {
-          if (!editDialogOpen) {
-            setIsEditing(false)
-            setEditingItem(null)
-          }
-        }, [editDialogOpen])
 
         // Manejar el envío del formulario
         const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -223,7 +230,9 @@ export default function OrigenesPage() {
             />
 
             {/* Diálogo de edición */}
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <Dialog open={editDialogOpen} onOpenChange={(open) => {
+                setEditDialogOpen(open);
+              }}>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "Editar Origen" : "Nuevo Origen"}</DialogTitle>

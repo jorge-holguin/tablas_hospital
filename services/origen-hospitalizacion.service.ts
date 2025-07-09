@@ -37,7 +37,9 @@ export class OrigenHospitalizacionService {
       // Construir la consulta SQL con búsqueda si se proporciona
       let whereClause = ''
       if (search) {
-        whereClause = `AND (CODIGO LIKE '%${search}%' OR NOM_CONSULTORIO LIKE '%${search}%' OR PACIENTE LIKE '%${search}%' OR NOM_MEDICO LIKE '%${search}%' OR EXISTS (SELECT 1 FROM dbo.ATENCIONC WHERE ID_CITA = CODIGO AND (NOMBRES LIKE '%${search}%' OR DNI LIKE '%${search}%')))`
+        whereClause = `AND (CODIGO LIKE '%${search}%' OR NOM_CONSULTORIO LIKE '%${search}%' OR PACIENTE LIKE '%${search}%' OR NOM_MEDICO LIKE '%${search}%' OR 
+          EXISTS (SELECT 1 FROM dbo.ATENCIONC WHERE ID_CITA = CODIGO AND ORIGEN = 'CE' AND (NOMBRES LIKE '%${search}%' OR DNI LIKE '%${search}%')) OR
+          EXISTS (SELECT 1 FROM dbo.EMERGENCIA WHERE EMERGENCIA_ID = CODIGO  AND ORIGEN = 'EM' AND (NOMBRES LIKE '%${search}%' OR DOCUMENTO LIKE '%${search}%')))`
       }
       
       // Ejecutar la consulta SQL directamente usando la vista V_ORIGEN_HOSPITALIZA
@@ -55,7 +57,16 @@ export class OrigenHospitalizacionService {
             WHEN ORIGEN = 'EM' THEN (SELECT DOCUMENTO FROM dbo.EMERGENCIA WHERE EMERGENCIA_ID = CODIGO)
             ELSE NULL
           END AS DNI,
-          (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = CODIGO) AS DX
+          CASE
+            WHEN ORIGEN = 'CE' THEN (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = CODIGO AND DX LIKE '[A-Z]%' ORDER BY DX)
+            WHEN ORIGEN = 'EM' THEN (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = CODIGO AND DX LIKE '[A-Z]%' ORDER BY DX)
+            ELSE NULL
+          END AS DX,
+          CASE
+            WHEN ORIGEN = 'CE' THEN (SELECT TOP 1 DX_DES FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = CODIGO AND DX LIKE '[A-Z]%' ORDER BY DX)
+            WHEN ORIGEN = 'EM' THEN (SELECT TOP 1 DX_DES FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = CODIGO AND DX LIKE '[A-Z]%' ORDER BY DX)
+            ELSE NULL
+          END AS DX_DES
         FROM (
           SELECT ROW_NUMBER() OVER (ORDER BY FECHA DESC) AS RowNum, ORIGEN, CODIGO, CONSULTORIO, NOM_CONSULTORIO, PACIENTE, FECHA, MEDICO, NOM_MEDICO
           FROM V_ORIGEN_HOSPITALIZA WITH (NOLOCK)
@@ -98,7 +109,8 @@ export class OrigenHospitalizacionService {
               C.NOMBRE AS NOM_MEDICO,
               RTRIM(ISNULL(D.NOMBRES, COALESCE(CONCAT(RTRIM(ISNULL(D.NOMBRE, '')), ' ', RTRIM(ISNULL(D.PATERNO, '')), ' ', RTRIM(ISNULL(D.MATERNO, ''))), A.NOMBRES))) AS NOMBRES,
               RTRIM(ISNULL(D.DOCUMENTO, A.DNI)) AS DNI,
-              (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.ID_CITA) AS DX,
+              (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.ID_CITA AND DX LIKE '[A-Z]%' ORDER BY DX) AS DX,
+              (SELECT TOP 1 DX_DES FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.ID_CITA AND DX LIKE '[A-Z]%' ORDER BY DX) AS DX_DES,
               A.FECHA AS FECHA_ORDEN
             FROM dbo.ATENCIONC AS A WITH (NOLOCK)
             INNER JOIN dbo.CONSULTORIO AS B WITH (NOLOCK) ON A.CONSULTORIO = B.CONSULTORIO 
@@ -120,7 +132,8 @@ export class OrigenHospitalizacionService {
               RTRIM(C.NOMBRE) AS NOM_MEDICO,
               RTRIM(ISNULL(D.NOMBRES, COALESCE(CONCAT(RTRIM(ISNULL(D.NOMBRE, '')), ' ', RTRIM(ISNULL(D.PATERNO, '')), ' ', RTRIM(ISNULL(D.MATERNO, ''))), RTRIM(ISNULL(A.NOMBRES, CONCAT(RTRIM(ISNULL(A.NOMBRE, '')), ' ', RTRIM(ISNULL(A.PATERNO, '')), ' ', RTRIM(ISNULL(A.MATERNO, '')))))))) AS NOMBRES,
               RTRIM(ISNULL(D.DOCUMENTO, RTRIM(ISNULL(A.DOCUMENTO, '')))) AS DNI,
-              (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.EMERGENCIA_ID) AS DX,
+              (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.EMERGENCIA_ID AND DX LIKE '[A-Z]%' ORDER BY DX) AS DX,
+              (SELECT TOP 1 DX_DES FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.EMERGENCIA_ID AND DX LIKE '[A-Z]%' ORDER BY DX) AS DX_DES,
               A.FECHA AS FECHA_ORDEN
             FROM dbo.EMERGENCIA AS A WITH (NOLOCK)
             INNER JOIN dbo.CONSULTORIO AS B WITH (NOLOCK) ON A.CONSULTORIO = B.CONSULTORIO 
@@ -158,7 +171,19 @@ export class OrigenHospitalizacionService {
             WHEN V.ORIGEN = 'EM' THEN E.DOCUMENTO
             ELSE NULL
           END AS DNI,
-          (SELECT TOP 1 DX FROM dbo.ATENCIOND AD WITH (NOLOCK) WHERE AD.ID_CITA = V.CODIGO) AS DX
+          CASE 
+            WHEN V.ORIGEN = 'CE' THEN (
+              SELECT STRING_AGG(CONCAT(RTRIM(AD.DX), ' ', AD.DX_DES), ' , ') 
+              FROM dbo.ATENCIOND AD WITH (NOLOCK) 
+              WHERE AD.ID_CITA = V.CODIGO AND AD.DX LIKE '[A-Z]%'
+            )
+            WHEN V.ORIGEN = 'EM' THEN (
+              SELECT STRING_AGG(CONCAT(RTRIM(AD.DX), ' ', AD.DX_DES), ' , ') 
+              FROM dbo.ATENCIOND AD WITH (NOLOCK) 
+              WHERE AD.ID_CITA = V.CODIGO AND AD.DX LIKE '[A-Z]%'
+            )
+            ELSE NULL
+          END AS DX
         FROM V_ORIGEN_HOSPITALIZA V WITH (NOLOCK)
         LEFT JOIN dbo.ATENCIONC A WITH (NOLOCK) ON V.ORIGEN = 'CE' AND V.CODIGO = A.ID_CITA
         LEFT JOIN dbo.EMERGENCIA E WITH (NOLOCK) ON V.ORIGEN = 'EM' AND V.CODIGO = E.EMERGENCIA_ID
@@ -190,7 +215,11 @@ export class OrigenHospitalizacionService {
               C.NOMBRE AS NOM_MEDICO,
               RTRIM(ISNULL(D.NOMBRES, COALESCE(CONCAT(RTRIM(ISNULL(D.NOMBRE, '')), ' ', RTRIM(ISNULL(D.PATERNO, '')), ' ', RTRIM(ISNULL(D.MATERNO, ''))), A.NOMBRES))) AS NOMBRES,
               RTRIM(ISNULL(D.DOCUMENTO, A.DNI)) AS DNI,
-              (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.ID_CITA) AS DX
+              (
+                SELECT STRING_AGG(CONCAT(RTRIM(DX), ' ', DX_DES), ' , ') 
+                FROM dbo.ATENCIOND WITH (NOLOCK) 
+                WHERE ID_CITA = A.ID_CITA AND DX LIKE '[A-Z]%'
+              ) AS DX
             FROM dbo.ATENCIONC AS A WITH (NOLOCK)
             INNER JOIN dbo.CONSULTORIO AS B WITH (NOLOCK) ON A.CONSULTORIO = B.CONSULTORIO 
             INNER JOIN dbo.MEDICO AS C WITH (NOLOCK) ON A.MEDICO = C.MEDICO  
@@ -210,7 +239,11 @@ export class OrigenHospitalizacionService {
               RTRIM(C.NOMBRE) AS NOM_MEDICO,
               RTRIM(ISNULL(D.NOMBRES, COALESCE(CONCAT(RTRIM(ISNULL(D.NOMBRE, '')), ' ', RTRIM(ISNULL(D.PATERNO, '')), ' ', RTRIM(ISNULL(D.MATERNO, ''))), RTRIM(ISNULL(A.NOMBRES, CONCAT(RTRIM(ISNULL(A.NOMBRE, '')), ' ', RTRIM(ISNULL(A.PATERNO, '')), ' ', RTRIM(ISNULL(A.MATERNO, '')))))))) AS NOMBRES,
               RTRIM(ISNULL(D.DOCUMENTO, RTRIM(ISNULL(A.DOCUMENTO, '')))) AS DNI,
-              (SELECT TOP 1 DX FROM dbo.ATENCIOND WITH (NOLOCK) WHERE ID_CITA = A.EMERGENCIA_ID) AS DX
+              (
+                SELECT STRING_AGG(CONCAT(RTRIM(DX), ' ', DX_DES), ' , ') 
+                FROM dbo.ATENCIOND WITH (NOLOCK) 
+                WHERE ID_CITA = A.EMERGENCIA_ID AND DX LIKE '[A-Z]%'
+              ) AS DX
             FROM dbo.EMERGENCIA AS A WITH (NOLOCK)
             INNER JOIN dbo.CONSULTORIO AS B WITH (NOLOCK) ON A.CONSULTORIO = B.CONSULTORIO 
             INNER JOIN dbo.MEDICO AS C WITH (NOLOCK) ON A.MEDICO = C.MEDICO
@@ -241,7 +274,9 @@ export class OrigenHospitalizacionService {
       // Construir la consulta SQL con búsqueda si se proporciona
       let whereClause = ''
       if (search) {
-        whereClause = `AND (CODIGO LIKE '%${search}%' OR NOM_CONSULTORIO LIKE '%${search}%' OR PACIENTE LIKE '%${search}%' OR NOM_MEDICO LIKE '%${search}%')`
+        whereClause = `AND (CODIGO LIKE '%${search}%' OR NOM_CONSULTORIO LIKE '%${search}%' OR PACIENTE LIKE '%${search}%' OR NOM_MEDICO LIKE '%${search}%' OR 
+          EXISTS (SELECT 1 FROM dbo.ATENCIONC WHERE ID_CITA = CODIGO AND ORIGEN = 'CE' AND (NOMBRES LIKE '%${search}%' OR DNI LIKE '%${search}%')) OR
+          EXISTS (SELECT 1 FROM dbo.EMERGENCIA WHERE EMERGENCIA_ID = CODIGO AND ORIGEN = 'EM' AND (NOMBRES LIKE '%${search}%' OR DOCUMENTO LIKE '%${search}%')))`
       }
       
       // Ejecutar la consulta SQL directamente para contar usando la vista V_ORIGEN_HOSPITALIZA

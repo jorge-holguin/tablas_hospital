@@ -1,0 +1,82 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { TarifarioService } from '@/services/tarifario.service'
+import { Prisma } from '@prisma/client'
+
+const tarifarioService = new TarifarioService()
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const take = searchParams.get('take') ? Number(searchParams.get('take')) : 10
+    const skip = searchParams.get('skip') ? Number(searchParams.get('skip')) : 0
+    const search = searchParams.get('search') || ''
+    
+    console.log('API request params:', { take, skip, search })
+    
+    let where: any = {}
+    
+    // Add search filter if provided
+    if (search) {
+      // Modificamos la forma en que enviamos la búsqueda para que funcione con OR
+      // El servicio busca en ITEM, NOMBRE y CPMS usando AND, pero queremos OR
+      // Enviamos el mismo término en todos los campos y el servicio lo procesará correctamente
+      where = {
+        ITEM: { contains: search },
+        NOMBRE: { contains: search },
+        CPMS: { contains: search }
+      }
+      console.log('Search filter added:', search)
+    }
+    
+    console.log('Final where condition:', JSON.stringify(where, null, 2))
+    
+    // Obtener los datos y el conteo total
+    const [tarifarios, totalCount] = await Promise.all([
+      tarifarioService.findAll({ take, skip, where }),
+      tarifarioService.count({ where })
+    ])
+
+    // Devolver los datos junto con metadatos de paginación
+    return NextResponse.json({
+      data: tarifarios,
+      meta: {
+        total: totalCount,
+        page: Math.floor(skip / take) + 1,
+        pageSize: take,
+        pageCount: Math.ceil(totalCount / take)
+      }
+    })
+  } catch (error) {
+    // Capturar información detallada del error
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    console.error('Error fetching tarifarios:', { 
+      message: errorMessage,
+      stack: errorStack,
+      url: req.url
+    })
+    
+    // Devolver un mensaje de error más informativo
+    return NextResponse.json({ 
+      error: 'Error al obtener datos de tarifario', 
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const data = await req.json()
+    // Note: The tarifario service doesn't have a create method yet
+    // This would need to be implemented in the service
+    // const tarifario = await tarifarioService.create(data)
+    return NextResponse.json({ message: "Método no implementado" }, { status: 501 })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}

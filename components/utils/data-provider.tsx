@@ -1,5 +1,7 @@
+"use client"
+
 import { useToast } from "@/hooks/use-toast"
-import {useState, useEffect} from 'react'
+import { useState, useEffect } from 'react'
 
 interface DataProviderProps<T extends Record<string, any>> {
   apiEndpoint: string
@@ -38,16 +40,16 @@ interface DataProviderProps<T extends Record<string, any>> {
   }) => React.ReactNode
 }
 
-export function DataProvider<T extends Record<string, any>>({ 
-  apiEndpoint, 
-  idField, 
+export function DataProvider<T extends Record<string, any>>({
+  apiEndpoint,
+  idField,
   defaultValues,
   extraParams = {},
-  children 
+  children
 }: DataProviderProps<T>) {
   const { toast } = useToast()
   const [data, setData] = useState<T[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [totalItems, setTotalItems] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -57,6 +59,12 @@ export function DataProvider<T extends Record<string, any>>({
   const [selectAll, setSelectAll] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  // Set isClient to true when component mounts (client-side only)
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Función para cargar los datos desde la API
   const loadData = async () => {
@@ -76,6 +84,7 @@ export function DataProvider<T extends Record<string, any>>({
         })
       }
       
+      // Construct the correct API URL path
       const url = `/api/tablas/${apiEndpoint}?take=${pageSize}&skip=${skip}${searchParam}${activeParam}${extraParamsString}`
       console.log('Fetching data from:', url)
       
@@ -173,18 +182,22 @@ export function DataProvider<T extends Record<string, any>>({
 
   // Cargar datos al iniciar y cuando cambien los filtros
   useEffect(() => {
-    loadData()
-  }, [currentPage, pageSize])
+    if (isClient) {
+      loadData()
+    }
+  }, [isClient, currentPage, pageSize])
 
   // Manejar búsqueda con debounce
   useEffect(() => {
+    if (!isClient) return
+    
     const timer = setTimeout(() => {
       setCurrentPage(1) // Resetear a la primera página al buscar
       loadData()
     }, 500)
     
     return () => clearTimeout(timer)
-  }, [searchTerm, filterActive])
+  }, [isClient, searchTerm, filterActive])
 
   // Manejar selección de todos los items
   const handleSelectAll = () => {
@@ -307,6 +320,15 @@ export function DataProvider<T extends Record<string, any>>({
         variant: "destructive"
       })
     }
+  }
+
+  // Render a loading spinner until client-side rendering is ready
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return children({
