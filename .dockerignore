@@ -16,6 +16,7 @@ pnpm-debug.log
 .env
 .env.*
 !.env.example
+!.npmrc
 
 # Archivos de construcción y caché
 .next
