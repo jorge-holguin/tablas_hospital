@@ -1,0 +1,53 @@
+# Archivos y directorios de desarrollo
+.git
+.github
+.vscode
+*.md
+!README.md
+
+# Dependencias
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Archivos de entorno y secretos (excepto ejemplos)
+.env
+.env.*
+!.env.example
+
+# Archivos de construcción y caché
+.next
+out
+dist
+build
+.cache
+.vercel
+.turbo
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de prueba
+coverage
+.nyc_output
+__tests__
+__mocks__
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+
+# Archivos de Docker
+Dockerfile
+.dockerignore
+docker-compose*
+
+# Otros archivos que no son necesarios en la imagen
+.eslintrc*
+.prettierrc*
+.editorconfig
+jest.config.*
+tsconfig.tsbuildinfo
