@@ -1,7 +1,15 @@
 import { PrismaClient } from '@prisma/client'
 import { formatResponse } from '@/lib/utils'
+import { mockPrismaClient } from '@/lib/mockPrismaClient'
 
-const prisma = new PrismaClient()
+// Usar el cliente mock si no hay conexión a la base de datos
+let prisma: PrismaClient
+try {
+  prisma = new PrismaClient()
+} catch (error) {
+  console.warn('Usando cliente Prisma mock debido a error de conexión:', error)
+  prisma = mockPrismaClient as unknown as PrismaClient
+}
 
 export interface Almacen {
   ALMACEN: string
@@ -9,10 +17,12 @@ export interface Almacen {
   ACTIVO: number
 }
 
+export class AlmacenService {
+
 /**
  * Obtiene la lista de almacenes con paginación y filtros
  */
-export async function getAlmacenes(
+static async getAlmacenes(
   searchTerm: string = "",
   page: number = 1,
   pageSize: number = 10,
@@ -88,7 +98,7 @@ export async function getAlmacenes(
 /**
  * Obtiene un almacén por su ID
  */
-export async function getAlmacenById(id: string) {
+static async getAlmacenById(id: string) {
   try {
     // Consulta SQL directa para obtener un almacén por ID
     const query = `
@@ -120,7 +130,7 @@ export async function getAlmacenById(id: string) {
 /**
  * Crea un nuevo almacén
  */
-export async function createAlmacen(data: {
+static async createAlmacen(data: {
   ALMACEN: string
   NOMBRE: string
   ACTIVO: number
@@ -168,7 +178,7 @@ export async function createAlmacen(data: {
 /**
  * Actualiza un almacén existente
  */
-export async function updateAlmacen(
+static async updateAlmacen(
   id: string,
   data: {
     NOMBRE?: string
@@ -234,7 +244,7 @@ export async function updateAlmacen(
 /**
  * Elimina un almacén existente
  */
-export async function deleteAlmacen(id: string) {
+static async deleteAlmacen(id: string) {
   try {
     // Verificar si el almacén existe
     const checkQuery = `
@@ -306,7 +316,7 @@ export async function deleteAlmacen(id: string) {
 /**
  * Cuenta el número de almacenes según los filtros
  */
-export async function countAlmacenes(searchTerm: string = "", activo?: number) {
+static async countAlmacenes(searchTerm: string = "", activo?: number) {
   try {
     // Construir la condición de búsqueda para SQL
     let whereCondition = "1=1"
@@ -336,3 +346,12 @@ export async function countAlmacenes(searchTerm: string = "", activo?: number) {
     return formatResponse(false, "Error al contar almacenes: " + (error instanceof Error ? error.message : String(error)), null)
   }
 }
+}
+
+// Exportar los métodos estáticos directamente para facilitar su importación
+export const getAlmacenes = AlmacenService.getAlmacenes;
+export const getAlmacenById = AlmacenService.getAlmacenById;
+export const createAlmacen = AlmacenService.createAlmacen;
+export const updateAlmacen = AlmacenService.updateAlmacen;
+export const deleteAlmacen = AlmacenService.deleteAlmacen;
+export const countAlmacenes = AlmacenService.countAlmacenes;
