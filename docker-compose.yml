@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    # Si necesitas variables de entorno adicionales, puedes agregarlas aquí
+    # env_file:
+    #   - .env.production
+    # Si necesitas volúmenes para persistencia de datos
+    # volumes:
+    #   - ./data:/app/data
