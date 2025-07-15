@@ -104,10 +104,8 @@ export default function OrigenesPage() {
         loadData
       }) => {
         
-        // Sincronizar el estado del diálogo de edición
-        useEffect(() => {
-          setEditDialogOpen(editDialogOpen);
-        }, [editDialogOpen]);
+        // No need to synchronize editDialogOpen with itself
+        // The state is already managed by DataProvider
         
         // Manejar la edición de un item
         const handleItemEdit = async (id: string) => {

@@ -12,10 +12,11 @@ yarn-debug.log
 yarn-error.log
 pnpm-debug.log
 
-# Archivos de entorno y secretos (excepto ejemplos)
-.env
+# Archivos de entorno y secretos (excepto los necesarios)
 .env.*
+!.env
 !.env.example
+# Permitir .npmrc para configuración de npm
 !.npmrc
 
 # Archivos de construcción y caché
@@ -46,9 +47,16 @@ Dockerfile
 .dockerignore
 docker-compose*
 
-# Otros archivos que no son necesarios en la imagen
+# Archivos de desarrollo
 .eslintrc*
 .prettierrc*
 .editorconfig
 jest.config.*
 tsconfig.tsbuildinfo
+
+# Archivos específicos de Windows que no son necesarios en Linux
+*.exe
+*.dll
+*.bat
+*.cmd
+*.ps1

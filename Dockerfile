@@ -4,6 +4,9 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
+# Instalar dependencias del sistema necesarias para Linux
+RUN apk add --no-cache libc6-compat
+
 # Copiar package.json y modificarlo para eliminar dependencias específicas de Windows
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
 
@@ -26,6 +29,12 @@ COPY . .
 # Configuración para el cliente Prisma mock en caso de error de conexión
 ENV NODE_ENV=production
 
+# Copiar archivo .env para usar las variables de entorno
+COPY .env ./
+
+# Generar Prisma Client
+RUN npx prisma generate
+
 # Construir la aplicación
 RUN npm run build
 
@@ -35,18 +44,25 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Crear usuario no privilegiado para ejecutar la aplicación
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copiar archivos necesarios desde la etapa de construcción
+COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Configurar los permisos adecuados para el directorio de caché de Next.js
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Copiar el código compilado de Next.js
+COPY --from=builder /app/.next ./.next
+RUN chown -R nextjs:nodejs ./.next
 
-# Copiar el resultado de la compilación de Next.js
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Instalar solo las dependencias de producción
+RUN npm install --production --ignore-scripts --prefer-offline
+
+# Establecer permisos correctos para Linux
+RUN chmod -R 755 /app
 
 USER nextjs
 
@@ -56,4 +72,4 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # Comando para iniciar la aplicación
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
